@@ -1,36 +1,48 @@
-function fetchInvoice() {
+document.getElementById("invoiceForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
   const brand = document.getElementById("brand").value;
   const invoice = document.getElementById("invoice").value.trim().toUpperCase();
-  const resultsEl = document.getElementById("results");
-  resultsEl.textContent = "🔍 Checking...";
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = "⏳ Loading...";
 
-  const url = `https://script.google.com/macros/s/AKfycbwTxdvUuFVCtW8Py6T28OGxYI2rwDfTQe1jkxcdyxcleSzVdBWWXkG0VPbW9U9WLOD2cg/exec?brand=${brand}`; // Ganti dengan URL Apps Script kamu
+  // GANTI LINK DI BAWAH INI DENGAN LINK DEPLOYED GOOGLE APPS SCRIPT MILIKMU
+  const scriptURL = "https://script.google.com/macros/s/AKfycbwTxdvUuFVCtW8Py6T28OGxYI2rwDfTQe1jkxcdyxcleSzVdBWWXkG0VPbW9U9WLOD2cg/exec";
 
-  fetch(url)
-    .then(res => res.json())
-    .then(data => {
-      const result = [];
-      data.forEach(row => {
-        if (row[invoice]) {
-          const d = row[invoice];
-          let statusText = d.inQty >= d.qty
-            ? "✅ Ready to Ship"
-            : `❌ Need (${d.qty - d.inQty}) more`;
+  fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data || !data.found) {
+        resultDiv.innerHTML = "❌ Invoice not found.";
+        return;
+      }
 
-          if (d.rework > 0) {
-            statusText += ` 🔄 Rework: ${d.rework}`;
-          }
+      let result = `📦 <strong>Invoice: ${invoice}</strong><br>`;
+      let totalQty = 0;
 
-          result.push(`${d.po} ${d.itemType} ${d.color} ${d.size} — Qty: ${d.qty} — ${statusText}`);
+      data.items.forEach((item) => {
+        const { po, itemType, color, size, qty, inQty, rework } = item;
+
+        let status = "✅ <strong>Ready to Ship</strong>";
+        if (inQty < qty) {
+          status = `❌ <strong>Still need (${qty - inQty})</strong>`;
         }
+
+        let reworkNote = "";
+        if (rework > 0) {
+          reworkNote = `🔄 <em>${rework} rework</em>`;
+        }
+
+        result += `🔹 <strong>${po} ${itemType} ${color} ${size}</strong><br>
+                   ➤ as <strong>${qty}</strong> → ${status}<br>${reworkNote}<br><br>`;
+        totalQty += qty;
       });
 
-      resultsEl.textContent = result.length
-        ? result.join("\n")
-        : "❌ Invoice not found.";
+      result += `📊 <strong>Total ${invoice}: ${totalQty}</strong><br>📞 <em>If error, call Emilio!</em>`;
+      resultDiv.innerHTML = result;
     })
-    .catch(err => {
-      console.error(err);
-      resultsEl.textContent = "❌ Error fetching data.";
+    .catch((err) => {
+      console.error("Fetch error:", err);
+      resultDiv.innerHTML = "⚠️ Error fetching data.";
     });
-}
+});

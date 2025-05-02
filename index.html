@@ -1,29 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Invoice Checker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Checker 📦</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <h1>📦 Invoice Checker</h1>
-
     <form id="invoiceForm">
-  <select id="brand">
-    <option value="TUMI">TUMI</option>
-    <option value="VICTORINOX">VICTORINOX</option>
-    <option value="BRIC'S">BRIC'S</option>
-    <option value="AWAY">AWAY</option>
-  </select>
-  <input type="text" id="invoice" placeholder="Enter Invoice" required />
-  <button type="submit">Check</button>
-</form>
-
-<div id="result"></div>
+      <select id="brand">
+        <option value="TUMI">TUMI</option>
+        <option value="VICTORINOX">VICTORINOX</option>
+        <option value="BRIC'S">BRIC'S</option>
+        <option value="AWAY">AWAY</option>
+      </select>
+      <input type="text" id="invoice" placeholder="Enter Invoice Number" required />
+      <button type="submit">Check</button>
+    </form>
+    <div id="result" class="result"></div>
   </div>
-
   <script src="script.js"></script>
 </body>
 </html>

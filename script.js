@@ -7,7 +7,7 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
   resultDiv.innerHTML = "⏳ Loading...";
 
   // GANTI LINK INI DENGAN LINK WEB APP KAMU SENDIRI
-  const scriptURL = "https://script.google.com/macros/s/AKfycbwTxdvUuFVCtW8Py6T28OGxYI2rwDfTQe1jkxcdyxcleSzVdBWWXkG0VPbW9U9WLOD2cg/exec";
+  const scriptURL = "https://script.google.com/macros/s/AKfycbxnFYyKbwGGuWMIlGroO0Q5UgFHCH6X4TP_0QXix8YiIOFzqn46p1u6N4XRFHioMHJf-g/exec";
 
   fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
     .then((res) => res.json())

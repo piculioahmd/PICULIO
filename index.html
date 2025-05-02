@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📦 Invoice Checker</h1>
+
+    <label for="brand">Select Brand</label>
+    <select id="brand">
+      <option>TUMI</option>
+      <option>VICTORINOX</option>
+      <option>BRIC'S</option>
+      <option>AWAY</option>
+    </select>
+
+    <input type="text" id="invoice" placeholder="Enter Invoice Number" />
+    <button onclick="fetchInvoice()">Check Invoice</button>
+
+    <div id="results"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

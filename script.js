@@ -4,7 +4,7 @@ function fetchInvoice() {
   const resultsEl = document.getElementById("results");
   resultsEl.textContent = "🔍 Checking...";
 
-  const url = `https://script.google.com/macros/s/AKfycbxyz123/exec?brand=${brand}`; // Ganti dengan URL Apps Script kamu
+  const url = `https://script.google.com/macros/s/AKfycbwTxdvUuFVCtW8Py6T28OGxYI2rwDfTQe1jkxcdyxcleSzVdBWWXkG0VPbW9U9WLOD2cg/exec?brand=${brand}`; // Ganti dengan URL Apps Script kamu
 
   fetch(url)
     .then(res => res.json())

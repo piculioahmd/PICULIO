@@ -2,25 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Invoice Checker 📦</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoice Checker</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>📦 Invoice Checker</h1>
-    <form id="invoiceForm">
-      <select id="brand">
-        <option value="TUMI">TUMI</option>
-        <option value="VICTORINOX">VICTORINOX</option>
-        <option value="BRIC`S">BRIC`S</option>
-        <option value="AWAY">AWAY</option>
-      </select>
-      <input type="text" id="invoice" placeholder="Enter Invoice Number" required />
-      <button type="submit">Check</button>
-    </form>
-    <div id="result" class="result"></div>
+
+  <!-- Floating Boxes -->
+  <img src="/assets/box1.png" class="floating-box box1" />
+  <img src="/assets/box2.png" class="floating-box box2" />
+
+  <!-- Logo -->
+  <img src="/assets/logo.png" class="logo" />
+
+  <!-- Input Form -->
+  <div class="input-container">
+    <div class="input-box">
+      <input id="invoice" placeholder="Search the INV..." />
+      <img src="/assets/icon-invoice.png" class="input-icon" />
+    </div>
+    <div class="input-box">
+      <input id="brand" placeholder="Choose the brand..." />
+      <img src="/assets/icon-brand.png" class="input-icon" />
+    </div>
+    <button onclick="submitForm()">Search</button>
   </div>
-  <script src="script.js"></script>
+
+  <!-- Contact Link -->
+  <p class="contact">Have question? <a href="https://wa.me/qr/AH4LAXNHJFNUM1" target="_blank">Contact us</a></p>
+
+  <!-- Result Panel -->
+  <div id="result-panel" class="result-panel">
+    <div class="panel-header" onclick="closePanel()">▼</div>
+    <div id="result-content"></div>
+  </div>
+
+  <script src="/script.js"></script>
 </body>
 </html>

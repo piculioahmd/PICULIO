@@ -6,7 +6,7 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
   const resultDiv = document.getElementById("result");
   resultDiv.innerHTML = "⏳ Loading...";
 
-  const scriptURL = "https://script.google.com/macros/s/AKfycbwPUON6iLiSGVptdO0zGv-0trCcP0nYxvX7gWj-PvYPS6MJoVoCGwMdN7VFBOvHCMAGaw/exec";
+  const scriptURL = "https://script.google.com/macros/s/AKfycbxtlPYaAQCIsgw-KwynJj0UBpnFw7Yq7RijGSjBD8EBIclhTreOKkIbYr9JrOOfk6g1GA/exec";
 
   fetch(${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)})
     .then((res) => res.json())

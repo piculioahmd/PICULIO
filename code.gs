@@ -6,49 +6,51 @@ function doGet() {
 
 function getInvoiceData(invoice) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const allSheets = ss.getSheets();
-  let result = '';
+  const sheets = ss.getSheets();
+  let output = '';
   let found = false;
   let totalQty = 0;
 
-  for (const sheet of allSheets) {
+  for (const sheet of sheets) {
     const data = sheet.getDataRange().getValues();
-    const invoiceIndex = data[2].indexOf(invoice);
-    if (invoiceIndex === -1) continue;
+    const headers = data[2] || [];
+    const colIndex = headers.indexOf(invoice);
+    if (colIndex === -1) continue;
 
     found = true;
-    result += `📦 *${invoice}*\n`;
+    output += `📦 ${invoice}\n`;
 
     for (let i = 3; i < data.length; i++) {
-      const qty = Number(data[i][invoiceIndex]);
-      if (!qty || isNaN(qty)) continue;
+      const row = data[i];
+      const requestedQty = Number(row[colIndex]);
+      if (!requestedQty || isNaN(requestedQty)) continue;
 
-      const po = data[i][0] || '-';
-      const type = data[i][3] || '-';
-      const size = data[i][4] || '-';
-      const color = (data[i][5] || '-').toString().split('#')[0];
-      const rework = Number(data[i][9] || 0);
-      const inQty = Number(data[i][10] || 0);
+      const po = row[0] || '-';
+      const itemType = row[3] || '-';
+      const size = row[4] || '-';
+      const color = (row[5] || '-').toString().split('#')[0];
+      const rework = Number(row[9]) || 0;
+      const inQty = Number(row[10]) || 0;
 
-      let line = `${po} ${type} ${color} ${size}” for ${qty}`;
-      if (inQty >= qty) {
+      let line = `${po} ${itemType} ${color} ${size}” for ${requestedQty}`;
+      if (inQty >= requestedQty) {
         line += ` ✅ Already OK`;
       } else {
-        const diff = qty - inQty;
-        if (rework > 0 && rework >= diff) {
-          line += ` ❌ Still short (${diff}) with rework ${rework} pcs`;
+        const short = requestedQty - inQty;
+        if (rework > 0) {
+          line += ` ❌ Still short (${short}) with rework ${rework} pcs`;
         } else {
-          line += ` ❌ Still missing (${diff})`;
+          line += ` ❌ Still missing (${short})`;
         }
       }
 
-      result += line + '\n';
-      totalQty += qty;
+      output += line + '\n';
+      totalQty += requestedQty;
     }
 
-    result += `\n📊 Total ${invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!\n`;
-    break;
+    output += `\n📊 Total ${invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!\n`;
+    break; // Stop after found in 1 sheet
   }
 
-  return found ? result : `❌ Invoice *${invoice}* not found in any brand.`;
+  return found ? output : `❌ Invoice *${invoice}* not found in any brand.`;
 }

@@ -6,25 +6,34 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        margin: 40px;
-        background: #f8f8f8;
+        background: #f9f9f9;
+        padding: 40px;
       }
       h2 {
-        color: #444;
+        margin-bottom: 10px;
+        color: #333;
       }
       input, button {
         padding: 10px;
-        font-size: 16px;
         width: 100%;
-        margin-bottom: 10px;
+        margin-top: 10px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+      }
+      button {
+        background: #1a73e8;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        margin-bottom: 20px;
       }
       #result {
         white-space: pre-wrap;
         background: white;
         padding: 20px;
-        border-radius: 8px;
         border: 1px solid #ccc;
-        margin-top: 20px;
+        border-radius: 10px;
       }
     </style>
   </head>
@@ -42,7 +51,7 @@
           return;
         }
 
-        document.getElementById('result').innerText = 'Checking...';
+        document.getElementById('result').innerText = '⏳ Checking...';
 
         google.script.run.withSuccessHandler(function(response) {
           document.getElementById('result').innerText = response;

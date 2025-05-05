@@ -1,27 +1,45 @@
-document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-  e.preventDefault();
-  const brand = document.getElementById("brand").value.trim();
-  const invoice = document.getElementById("invoice").value.trim().toUpperCase();
+body {
+  font-family: sans-serif;
+  background: #f7f7f7;
+  padding: 20px;
+}
 
-  if (!invoice || !brand) return;
+.container {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 2em;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
 
-  const url = `https://script.google.com/macros/s/AKfycbwPUON6iLiSGVptdO0zGv-0trCcP0nYxvX7gWj-PvYPS6MJoVoCGwMdN7VFBOvHCMAGaw/exec?invoice=${encodeURIComponent(invoice)}&brand=${encodeURIComponent(brand)}`;
+h1 {
+  text-align: center;
+}
 
-  const resultContent = document.getElementById("result-content");
-  resultContent.innerHTML = "⏳ Loading...";
-  document.getElementById("result-panel").classList.add("active");
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
 
-  fetch(url)
-    .then(res => res.text())
-    .then(data => {
-      resultContent.innerHTML = data;
-    })
-    .catch(err => {
-      resultContent.innerHTML = "⚠️ Error fetching data.";
-      console.error(err);
-    });
-});
+input,
+select,
+button {
+  padding: 0.8em;
+  font-size: 1em;
+}
 
-function closePanel() {
-  document.getElementById("result-panel").classList.remove("active");
+button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.result {
+  margin-top: 1em;
+  white-space: pre-wrap;
+  font-size: 0.95em;
 }

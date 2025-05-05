@@ -1,32 +1,23 @@
 const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ';
 
-function doGet(e) {
-  const invoice = e.parameter.invoice;
-  const brand = e.parameter.brand;
-  if (!invoice) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'No invoice provided' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const result = getInvoiceData(invoice, brand);
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function getInvoiceData(invoice, brand) {
+function getInvoiceData(invoice) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allSheets = ss.getSheets();
+  let result = '';
   let found = false;
-  let items = [];
   let totalQty = 0;
 
   for (const sheet of allSheets) {
-    if (brand && sheet.getName().toLowerCase() !== brand.toLowerCase()) continue;
-
     const data = sheet.getDataRange().getValues();
     const invoiceIndex = data[2].indexOf(invoice);
     if (invoiceIndex === -1) continue;
 
     found = true;
+    result += `📦 *${invoice}*\n`;
 
     for (let i = 3; i < data.length; i++) {
       const qty = Number(data[i][invoiceIndex]);
@@ -39,24 +30,25 @@ function getInvoiceData(invoice, brand) {
       const rework = Number(data[i][9] || 0);
       const inQty = Number(data[i][10] || 0);
 
-      let item = {
-        po,
-        itemType: type,
-        color,
-        size,
-        qty,
-        inQty,
-        rework
-      };
+      let line = `${po} ${type} ${color} ${size}” for ${qty}`;
+      if (inQty >= qty) {
+        line += ` ✅ Already OK`;
+      } else {
+        const diff = qty - inQty;
+        if (rework > 0 && rework >= diff) {
+          line += ` ❌ Still short (${diff}) with rework ${rework} pcs`;
+        } else {
+          line += ` ❌ Still missing (${diff})`;
+        }
+      }
 
-      items.push(item);
+      result += line + '\n';
       totalQty += qty;
     }
 
-    break; // Stop after first found
+    result += `\n📊 Total ${invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!\n`;
+    break;
   }
 
-  return found
-    ? { found: true, invoice, items, totalQty }
-    : { found: false };
+  return found ? result : `❌ Invoice *${invoice}* not found in any brand.`;
 }

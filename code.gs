@@ -1,56 +1,62 @@
 const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ';
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
+function doGet(e) {
+  const invoice = e.parameter.invoice?.trim().toUpperCase();
+  if (!invoice) {
+    return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
+  }
 
-function getInvoiceData(invoice) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheets = ss.getSheets();
-  let output = '';
-  let found = false;
+  const allSheets = ss.getSheets();
   let totalQty = 0;
+  let result = `📦 ${invoice}\n`;
+  let found = false;
 
-  for (const sheet of sheets) {
+  for (const sheet of allSheets) {
     const data = sheet.getDataRange().getValues();
-    const headers = data[2] || [];
-    const colIndex = headers.indexOf(invoice);
-    if (colIndex === -1) continue;
-
-    found = true;
-    output += `📦 ${invoice}\n`;
+    const invoiceIndex = data[2]?.indexOf(invoice);
+    if (invoiceIndex === -1) continue;
 
     for (let i = 3; i < data.length; i++) {
       const row = data[i];
-      const requestedQty = Number(row[colIndex]);
-      if (!requestedQty || isNaN(requestedQty)) continue;
+      const qty = Number(row[invoiceIndex]);
+      if (!qty || isNaN(qty)) continue;
 
-      const po = row[0] || '-';
-      const itemType = row[3] || '-';
-      const size = row[4] || '-';
-      const color = (row[5] || '-').toString().split('#')[0];
-      const rework = Number(row[9]) || 0;
-      const inQty = Number(row[10]) || 0;
+      const po = row[0] || "-";
+      const type = row[3] || "-";
+      const size = row[4] || "-";
+      const color = (row[5] || "-").toString().split('#')[0];
+      const inQty = Number(row[10] || 0);
+      const rework = Number(row[9] || 0);
 
-      let line = `${po} ${itemType} ${color} ${size}” for ${requestedQty}`;
-      if (inQty >= requestedQty) {
-        line += ` ✅ Already OK`;
+      let statusLine = `${po} ${type} ${color} ${size}” for ${qty}`;
+      const shortfall = qty - inQty;
+
+      if (shortfall <= 0) {
+        statusLine += " ✅ Already OK";
       } else {
-        const short = requestedQty - inQty;
+        let shortText = `❌ Still short (${shortfall})`;
         if (rework > 0) {
-          line += ` ❌ Still short (${short}) with rework ${rework} pcs`;
-        } else {
-          line += ` ❌ Still missing (${short})`;
+          shortText += ` with rework ${rework} pcs`;
         }
+        statusLine += ` ${shortText}`;
       }
 
-      output += line + '\n';
-      totalQty += requestedQty;
+      result += statusLine + '\n';
+      totalQty += qty;
+      found = true;
     }
 
-    output += `\n📊 Total ${invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!\n`;
-    break; // Stop after found in 1 sheet
+    break; // stop after first matching sheet
   }
 
-  return found ? output : `❌ Invoice *${invoice}* not found in any brand.`;
+  if (!found) {
+    return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  result += `\n📊 Total ${invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!`;
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ found: true, message: result }))
+    .setMimeType(ContentService.MimeType.JSON);
 }

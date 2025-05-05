@@ -1,40 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Invoice Checker</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="background">
-    <img src="assets/logo.png" class="logo" alt="Invoice Checker Logo"/>
-    <img src="assets/box1.png" class="box box1"/>
-    <img src="assets/box2.png" class="box box2"/>
-    <img src="assets/box3.png" class="box box3"/>
-
-    <form id="invoiceForm">
-      <div class="input-container">
-        <input type="text" id="invoice" placeholder="Search the INV..." required />
-        <img src="assets/icon-invoice.png" class="input-icon" />
-      </div>
-      <div class="input-container">
-        <input type="text" id="brand" placeholder="Choose the brand..." required />
-        <img src="assets/icon-brand.png" class="input-icon" />
-      </div>
-      <button type="submit" class="submit-btn">Search</button>
-    </form>
-
-    <p class="contact-text">Have question? <a href="https://wa.me/qr/AH4LAXNHJFNUM1" target="_blank">Contact us</a></p>
-  </div>
-
-  <div id="result-panel">
-    <div class="panel-header" onclick="closePanel()">
-      <div class="panel-drag"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice Checker 📦</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>📦 Invoice Checker</h1>
+      <form id="invoiceForm">
+        <select id="brand">
+          <option value="TUMI">TUMI</option>
+          <option value="VICTORINOX">VICTORINOX</option>
+          <option value="BRICS">BRICS</option>
+          <option value="AWAY">AWAY</option>
+        </select>
+        <input type="text" id="invoice" placeholder="Enter Invoice Number" required />
+        <button type="submit">Check</button>
+      </form>
+      <div id="result" class="result"></div>
     </div>
-    <div id="result-content"></div>
-  </div>
-
-  <script src="script.js"></script>
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>

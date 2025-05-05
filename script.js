@@ -1,45 +1,48 @@
-body {
-  font-family: sans-serif;
-  background: #f7f7f7;
-  padding: 20px;
-}
+document.getElementById("invoiceForm").addEventListener("submit", function (e) {
+  e.preventDefault();
 
-.container {
-  max-width: 500px;
-  margin: auto;
-  background: white;
-  padding: 2em;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
+  const brand = document.getElementById("brand").value;
+  const invoice = document.getElementById("invoice").value.trim().toUpperCase();
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = "⏳ Loading...";
 
-h1 {
-  text-align: center;
-}
+  const scriptURL = "https://script.google.com/macros/s/AKfycbwPUON6iLiSGVptdO0zGv-0trCcP0nYxvX7gWj-PvYPS6MJoVoCGwMdN7VFBOvHCMAGaw/exec";
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1em;
-}
+  fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data || !data.found) {
+        resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
+        return;
+      }
 
-input,
-select,
-button {
-  padding: 0.8em;
-  font-size: 1em;
-}
+      let result = `📦 ${data.invoice}\n`;
+      let totalQty = 0;
 
-button {
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
+      data.items.forEach((item) => {
+        const { po, itemType, color, size, qty, inQty, rework } = item;
+        let diff = qty - inQty;
+        let status = '';
 
-.result {
-  margin-top: 1em;
-  white-space: pre-wrap;
-  font-size: 0.95em;
-}
+        if (inQty >= qty) {
+          status = '✅ Already OK';
+        } else if (rework > 0 && rework >= diff) {
+          status = `❌ Still short (${diff}) with rework ${rework} pcs`;
+        } else if (rework > 0 && rework < diff) {
+          status = `❌ Still missing (${diff}) with rework ${rework} pcs`;
+        } else {
+          status = `❌ Still lacking (${diff})`;
+        }
+
+        result += `${po} ${itemType} ${color} ${size} for ${qty} ${status}\n`;
+        totalQty += qty;
+      });
+
+      result += `\n📊 Total ${data.invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!`;
+      resultDiv.innerHTML = `<pre>${result}</pre>`;
+    })
+    .catch((err) => {
+      console.error("Fetch error:", err);
+      resultDiv.innerHTML = "⚠️ Error fetching data.";
+    });
+});

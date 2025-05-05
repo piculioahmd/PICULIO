@@ -23,15 +23,13 @@ form {
   gap: 1em;
 }
 
-input,
-select,
-button {
+input, select, button {
   padding: 0.8em;
   font-size: 1em;
 }
 
 button {
-  background: #4caf50;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 6px;

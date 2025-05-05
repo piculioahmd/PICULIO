@@ -1,114 +1,45 @@
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #fff;
-  overflow-x: hidden;
-}
-
-.background {
-  text-align: center;
-  position: relative;
-  padding-top: 50px;
-}
-
-.logo {
-  width: 250px;
-  margin-bottom: 30px;
-}
-
-.box {
-  position: absolute;
-  width: 80px;
-  opacity: 0.8;
-}
-
-.box1 { top: 20px; left: 10%; }
-.box2 { top: 100px; right: 15%; }
-.box3 { bottom: 50px; left: 20%; }
-
-.input-container {
-  margin: 10px auto;
-  width: 80%;
-  position: relative;
-  max-width: 400px;
-}
-
-input {
-  width: 100%;
-  padding: 15px 45px 15px 15px;
-  font-size: 16px;
-  border-radius: 25px;
-  border: 1px solid #ccc;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.input-icon {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-}
-
-.submit-btn {
-  margin-top: 10px;
-  padding: 12px 30px;
-  font-size: 16px;
-  border: none;
-  border-radius: 25px;
-  background: #008cff;
-  color: white;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-}
-
-.contact-text {
-  margin-top: 20px;
-  font-size: 14px;
-}
-.contact-text a {
-  color: #007bff;
-  text-decoration: underline;
-}
-
-#result-panel {
-  position: fixed;
-  bottom: -100%;
-  left: 0;
-  width: 100%;
-  max-height: 80%;
-  background: white;
-  box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  transition: bottom 0.4s ease;
-  overflow-y: auto;
-  z-index: 999;
-}
-
-#result-panel.active {
-  bottom: 0;
-}
-
-.panel-header {
-  width: 100%;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.panel-drag {
-  width: 50px;
-  height: 5px;
-  background: #ccc;
-  border-radius: 5px;
-  margin: 0 auto;
-}
-
-#result-content {
+  font-family: sans-serif;
+  background: #f7f7f7;
   padding: 20px;
-  font-size: 14px;
-  text-align: left;
+}
+
+.container {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 2em;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+input,
+select,
+button {
+  padding: 0.8em;
+  font-size: 1em;
+}
+
+button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.result {
+  margin-top: 1em;
   white-space: pre-wrap;
+  font-size: 0.95em;
 }

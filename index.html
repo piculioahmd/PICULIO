@@ -1,18 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Invoice Checker</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="container">
-    <h1>📦 Invoice Checker</h1>
-    <input type="text" id="invoiceInput" placeholder="Enter Invoice Code (e.g. INV-E2500174)" />
-    <button onclick="checkInvoice()">🔍 Check</button>
-    <pre id="result"></pre>
-  </div>
-  <script src="script.js"></script>
-</body>
+<html>
+  <head>
+    <base target="_top">
+    <title>Invoice Checker</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        background: #f8f8f8;
+      }
+      h2 {
+        color: #444;
+      }
+      input, button {
+        padding: 10px;
+        font-size: 16px;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      #result {
+        white-space: pre-wrap;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>🔍 Invoice Checker</h2>
+    <input type="text" id="invoiceInput" placeholder="Enter Invoice Code (e.g., INV-E2500174)" />
+    <button onclick="checkInvoice()">Check Invoice</button>
+    <div id="result"></div>
+
+    <script>
+      function checkInvoice() {
+        const invoice = document.getElementById('invoiceInput').value.trim();
+        if (!invoice) {
+          alert("Please enter an invoice code.");
+          return;
+        }
+
+        document.getElementById('result').innerText = 'Checking...';
+
+        google.script.run.withSuccessHandler(function(response) {
+          document.getElementById('result').innerText = response;
+        }).getInvoiceData(invoice);
+      }
+    </script>
+  </body>
 </html>

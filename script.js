@@ -27,9 +27,9 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
         if (inQty >= qty) {
           status = '✅ Already OK';
         } else if (rework > 0 && rework >= diff) {
-          status = `❌ Still short (${diff}) with rework ${rework} pcs`;
+          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
         } else if (rework > 0 && rework < diff) {
-          status = `❌ Still missing (${diff}) with rework ${rework} pcs`;
+          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
         } else {
           status = `❌ Still lacking (${diff})`;
         }

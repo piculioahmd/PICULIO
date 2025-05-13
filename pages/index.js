@@ -1,29 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Invoice Checker 📦</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="container">
-    <h1>📦 Invoice Checker</h1>
-    <form id="invoiceForm">
-      <select id="brand">
-        <option value="TUMI">TUMI</option>
-        <option value="VICTORINOX">VICTORINOX</option>
-        <option value="BRIC`S">BRIC`S</option>
-        <option value="AWAY">AWAY</option>
-        <option value="ARLO SKYE">ARLO SKYE</option>
-        <option value="BEIS">BEIS</option>
-        <option value="LOJEL">LOJEL</option>
-      </select>
-      <input type="text" id="invoice" placeholder="Enter Invoice Number" required />
-      <button type="submit">Check</button>
-    </form>
-    <div id="result" class="result"></div>
-  </div>
-  <script src="script.js"></script>
-</body>
-</html>
+// pages/index.js
+import { useEffect, useState } from 'react';
+
+export default function Home() {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    async function ambilData() {
+      const res = await fetch(`/api/fetch-data?so=YOE-25030003&wo=WO123456`);
+      const json = await res.json();
+      setData(json.data);
+    }
+    ambilData();
+  }, []);
+
+  return (
+    <div>
+      <h1>Data Produksi</h1>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>SO</th>
+            <th>WO</th>
+            <th>Brand</th>
+            <th>Model</th>
+            <th>Size</th>
+            <th>Color</th>
+            <th>PO QTY</th>
+            <th>IN</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i}>
+              <td>{row[0]}</td>
+              <td>{row[1]}</td>
+              <td>{row[2]}</td>
+              <td>{row[3]}</td>
+              <td>{row[4]}</td>
+              <td>{row[5]}</td>
+              <td>{row[6]}</td>
+              <td>{row[7]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -1,8 +1,0 @@
-// === /package.json ===
-{
-  "name": "invoice-checker",
-  "version": "1.0.0",
-  "dependencies": {
-    "googleapis": "^132.0.0"
-  }
-}

@@ -26,15 +26,16 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
 
         if (inQty >= qty) {
           status = '✅ Already OK';
-        } else if (rework > 0 && rework >= diff) {
-          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
-        } else if (rework > 0 && rework < diff) {
-          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
         } else {
           status = `❌ Still lacking (${diff})`;
         }
 
-        result += `${po} ${itemType} ${color} ${size} for ${qty} ${status}\n`;
+        // Tambahkan info rework jika ada
+        if (rework > 0) {
+          status += ` | rework: ${rework} pcs`;
+        }
+
+        result += `${po} ${itemType} ${color} ${size} for ${qty} → ${status}\n`;
         totalQty += qty;
       });
 

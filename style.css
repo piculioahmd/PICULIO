@@ -40,4 +40,11 @@ button {
   margin-top: 1em;
   white-space: pre-wrap;
   font-size: 0.95em;
+  max-height: 200px;          /* batas tinggi area output */
+  overflow-y: auto;           /* scroll vertikal jika terlalu panjang */
+  word-wrap: break-word;      /* supaya kata panjang dipotong, tidak melebar */
+  background: #f0f0f0;        /* warna latar abu muda */
+  padding: 1em;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }

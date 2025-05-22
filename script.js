@@ -6,7 +6,7 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
   const resultDiv = document.getElementById("result");
   resultDiv.innerHTML = "⏳ Loading...";
 
-  const scriptURL = "https://script.google.com/macros/s/AKfycbwlsi3WtD-o169WkQcfiRElKZKck6fdv6-irTanigiBGQkExyIc-3DTfSgnWQJptnOrpg/exec";
+  const scriptURL = "https://script.google.com/macros/s/AKfycbwPUON6iLiSGVptdO0zGv-0trCcP0nYxvX7gWj-PvYPS6MJoVoCGwMdN7VFBOvHCMAGaw/exec";
 
   fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
     .then((res) => res.json())
@@ -21,25 +21,21 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
 
       data.items.forEach((item) => {
         const { po, itemType, color, size, qty, inQty, rework } = item;
-        const diff = qty - inQty;
+        let diff = qty - inQty;
         let status = '';
 
-        if (diff <= 0) {
+        if (inQty >= qty) {
           status = '✅ Already OK';
-        } else if (rework > 0 && rework >= diff) {
-          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
-        } else if (rework > 0 && rework < diff) {
-          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
         } else {
           status = `❌ Still lacking (${diff})`;
         }
 
-        // Tambahkan info rework bahkan jika Already OK
-        if (rework > 0 && diff <= 0) {
-          status += ` with rework ${rework} pcs`;
+        // Tambahkan info rework jika ada
+        if (rework > 0) {
+          status += ` | rework: ${rework} pcs`;
         }
 
-        result += `${po} ${itemType} ${color} ${size} for ${qty} ${status}\n`;
+        result += `${po} ${itemType} ${color} ${size} for ${qty} → ${status}\n`;
         totalQty += qty;
       });
 

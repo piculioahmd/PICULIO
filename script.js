@@ -4,7 +4,7 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
   const brand = document.getElementById("brand").value;
   const invoice = document.getElementById("invoice").value.trim().toUpperCase();
   const resultDiv = document.getElementById("result");
-  resultDiv.innerHTML = "⏳ Wait the process, baby...";
+  resultDiv.innerHTML = "⏳ Loading, baby...";
 
   const scriptURL = "https://script.google.com/macros/s/AKfycbwPUON6iLiSGVptdO0zGv-0trCcP0nYxvX7gWj-PvYPS6MJoVoCGwMdN7VFBOvHCMAGaw/exec";
 

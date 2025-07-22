@@ -7,7 +7,7 @@ body {
 .container {
   max-width: 500px;
   margin: auto;
-  background: white;
+  background: #FFC1DA;
   padding: 2em;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -30,7 +30,7 @@ input, select, button {
 
 button {
   background: #F8F8E1;
-  color: white;
+  color: rainbow;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -43,7 +43,7 @@ button {
   max-height: 200px;          /* batas tinggi area output */
   overflow-y: auto;           /* scroll vertikal jika terlalu panjang */
   word-wrap: break-word;      /* supaya kata panjang dipotong, tidak melebar */
-  background: #FFC1DA;        /* warna latar abu muda */
+  background: #8ACCD5;        /* warna latar abu muda */
   padding: 1em;
   border-radius: 8px;
   border: 1px solid #ccc;

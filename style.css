@@ -1,6 +1,6 @@
 body {
   font-family: sans-serif;
-  background: #e9fa00;
+  background: #FF90BB;
   padding: 20px;
 }
 
@@ -29,7 +29,7 @@ input, select, button {
 }
 
 button {
-  background: #90c7d4;
+  background: #F8F8E1;
   color: white;
   border: none;
   border-radius: 6px;
@@ -43,7 +43,7 @@ button {
   max-height: 200px;          /* batas tinggi area output */
   overflow-y: auto;           /* scroll vertikal jika terlalu panjang */
   word-wrap: break-word;      /* supaya kata panjang dipotong, tidak melebar */
-  background: #90d4c9;        /* warna latar abu muda */
+  background: #FFC1DA;        /* warna latar abu muda */
   padding: 1em;
   border-radius: 8px;
   border: 1px solid #ccc;

@@ -1,17 +1,3 @@
-const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ';
-
-function doGet(e) {
-  const invoice = e.parameter.invoice;
-  const brand = e.parameter.brand;
-  if (!invoice) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'No invoice provided' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const result = getInvoiceData(invoice, brand);
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
-}
-
 function getInvoiceData(invoice, brand) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allSheets = ss.getSheets();
@@ -23,11 +9,25 @@ function getInvoiceData(invoice, brand) {
     if (brand && sheet.getName().toLowerCase() !== brand.toLowerCase()) continue;
 
     const data = sheet.getDataRange().getValues();
-    const invoiceIndex = data[2].indexOf(invoice);
+    const headerRow1 = data[0]; // Baris 1
+    const headerRow3 = data[2]; // Baris 3
+    const invoiceIndex = headerRow3.indexOf(invoice);
     if (invoiceIndex === -1) continue;
 
-    found = true;
+    // Step 1: Hitung qty dari invoice yang sudah exported (selain invoice yang diminta)
+    let usedQtyMap = {};
+    for (let col = 12; col < headerRow3.length; col++) { // kol M (index 12)
+      const isExported = (headerRow1[col] || '').toString().toLowerCase().includes("exported");
+      const currentInvoice = headerRow3[col];
+      if (!isExported || currentInvoice === invoice) continue;
 
+      for (let row = 3; row < data.length; row++) {
+        const qty = Number(data[row][col]) || 0;
+        usedQtyMap[row] = (usedQtyMap[row] || 0) + qty;
+      }
+    }
+
+    // Step 2: Ambil item dari invoice yg dicari
     for (let i = 3; i < data.length; i++) {
       const qty = Number(data[i][invoiceIndex]);
       if (!qty || isNaN(qty)) continue;
@@ -38,22 +38,25 @@ function getInvoiceData(invoice, brand) {
       const color = (data[i][5] || '-').toString().split('#')[0];
       const rework = Number(data[i][9] || 0);
       const inQty = Number(data[i][10] || 0);
+      const usedQty = usedQtyMap[i] || 0;
+      const remaining = inQty - usedQty;
 
-      let item = {
+      items.push({
         po,
         itemType: type,
         color,
         size,
         qty,
         inQty,
-        rework
-      };
+        rework,
+        remaining
+      });
 
-      items.push(item);
       totalQty += qty;
     }
 
-    break; // Stop after first found
+    found = true;
+    break;
   }
 
   return found

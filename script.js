@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // ⛔ penting untuk mencegah reload!
+    e.preventDefault(); // ⛔ mencegah reload!
 
     const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
@@ -11,12 +11,15 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    resultDiv.innerHTML = "⏳ Loading...";
+    resultDiv.innerHTML = "⏳ Checking...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti sesuai milikmu
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
       .then((data) => {
         if (!data || !data.found) {
           resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
@@ -28,7 +31,9 @@ document.addEventListener("DOMContentLoaded", function () {
         output += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
 
         data.items.forEach(item => {
-          const { po, itemType, color, size, qty, remaining, rework, status } = item;
+          const { po, itemType, color, size, qty, remaining, rework } = item;
+          const status = (remaining >= qty) ? "✅ OK" : `❌ Short (${qty - remaining})`;
+
           output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
         });
 
@@ -39,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .catch((err) => {
         console.error("Fetch error:", err);
-        resultDiv.innerHTML = "⚠️ Error fetching data.";
+        resultDiv.innerHTML = `⚠️ Error fetching data.\n${err.message}`;
       });
   });
 });

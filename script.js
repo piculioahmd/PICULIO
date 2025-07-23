@@ -7,11 +7,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const resultDiv = document.getElementById("result");
 
     if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Please enter brand and invoice.";
+      resultDiv.innerHTML = "⚠️ Masukin, nyet.";
       return;
     }
 
-    resultDiv.innerHTML = "⏳ Checking...";
+    resultDiv.innerHTML = "⏳ SABAR KATA GUA GEH...";
 
     const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti sesuai milikmu
 
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .then((data) => {
         if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
+          resultDiv.innerHTML = `❌ Invoice ${invoice} kaga ada nyet.`;
           return;
         }
 
@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         data.items.forEach(item => {
           const { po, itemType, color, size, qty, remaining, rework } = item;
-          const status = (remaining >= qty) ? "✅ OK" : `❌ Short (${qty - remaining})`;
+          const status = (remaining >= qty) ? "✅ Eksporin ae" : `❌ Masih kurang (${qty - remaining})`;
 
           output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
         });

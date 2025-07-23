@@ -3,27 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Invoice Checker 📦</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Invoice Checker</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>📦 Invoice Checker</h1>
-    <form id="invoiceForm">
-      <select id="brand">
-        <option value="ARLO SKYE">ARLO SKYE</option>
-        <option value="AWAY">AWAY</option>
-        <option value="BEIS">BEIS</option>
-        <option value="BRIC`S">BRIC`S</option>
-        <option value="DURAVO">DURAVO</option>
-        <option value="TUMI">TUMI</option>
-        <option value="VICTORINOX">VICTORINOX</option>
-      </select>
-      <input type="text" id="invoice" placeholder="Enter Invoice Number" required />
-      <button type="submit">Check</button>
-    </form>
-    <div id="result" class="result"></div>
-  </div>
+  <h1>📦 Invoice Checker</h1>
+  <form id="invoiceForm">
+    <label for="brand">Brand:</label>
+    <select id="brand" required>
+      <option value="">--Select Brand--</option>
+      <option value="TUMI">TUMI</option>
+      <option value="VICTORINOX">VICTORINOX</option>
+      <option value="BRIC'S">BRIC'S</option>
+      <option value="AWAY">AWAY</option>
+    </select>
+
+    <label for="invoice">Invoice Number:</label>
+    <input type="text" id="invoice" placeholder="e.g. INV-E2500399" required />
+
+    <button type="submit">CHECK</button>
+  </form>
+
+  <div id="result"></div>
+
   <script src="script.js"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const resultDiv = document.getElementById("result");
 
     if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin, nyet.";
+      resultDiv.innerHTML = "⚠️ Masukin, nyet. Jan lupa";
       return;
     }
 

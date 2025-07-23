@@ -11,39 +11,33 @@ document.getElementById("invoiceForm").addEventListener("submit", function (e) {
   fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
     .then((res) => res.json())
     .then((data) => {
-      if (!data || !data.found) {
-        resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
-        return;
-      }
+  if (!data || !data.found) {
+    resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
+    return;
+  }
 
-      let result = `📦 ${data.invoice}\n`;
-      let totalQty = 0;
+  let result = `📦 ${data.invoice}\n\n`;
+  result += `PO              Model     Color     Size    Qty   Remain  Rework  Status\n`;
+  result += `----------------------------------------------------------------------\n`;
 
-      data.items.forEach((item) => {
-        const { po, itemType, color, size, qty, inQty, rework } = item;
-        let diff = qty - inQty;
-        let status = '';
+  let totalQty = 0;
 
-        if (inQty >= qty) {
-          status = '✅ Already OK';
-        } else {
-          status = `❌ Still lacking (${diff})`;
-        }
+  data.items.forEach((item) => {
+    const { po, itemType, color, size, qty, inQty, rework, remaining } = item;
+    totalQty += qty;
 
-        // Tambahkan info rework jika ada
-        if (rework > 0) {
-          status += ` | rework: ${rework} pcs`;
-        }
+    let status = '';
+    if (remaining >= qty) {
+      status = '✅ OK';
+    } else {
+      const diff = qty - remaining;
+      status = `❌ Short (${diff})`;
+    }
 
-        result += `${po} ${itemType} ${color} ${size} for ${qty} → ${status}\n`;
-        totalQty += qty;
-      });
+    const line = `${po.padEnd(15)} ${itemType.padEnd(9)} ${color.padEnd(9)} ${size.padEnd(6)} ${String(qty).padEnd(5)} ${String(remaining).padEnd(7)} ${String(rework).padEnd(7)} ${status}`;
+    result += line + '\n';
+  });
 
-      result += `\n📊 Total ${data.invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!`;
-      resultDiv.innerHTML = `<pre>${result}</pre>`;
-    })
-    .catch((err) => {
-      console.error("Fetch error:", err);
-      resultDiv.innerHTML = "⚠️ Error fetching data.";
-    });
-});
+  result += `\n📊 Total ${data.invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!`;
+  resultDiv.innerHTML = `<pre>${result}</pre>`;
+})

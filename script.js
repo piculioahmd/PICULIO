@@ -1,50 +1,67 @@
-// ✅ script.js (Untuk Vercel frontend)
+// script.js
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // ⛔ no reload
+  const brandInput = document.getElementById("brand");
+  const invoiceInput = document.getElementById("invoice");
+  const checkBtn = document.getElementById("checkBtn");
+  const resultContainer = document.getElementById("result");
 
-    const brand = document.getElementById("brand").value;
-    const invoice = document.getElementById("invoice").value.trim().toUpperCase();
-    const resultDiv = document.getElementById("result");
+  checkBtn.addEventListener("click", async () => {
+    const brand = brandInput.value.trim();
+    const invoice = invoiceInput.value.trim();
+    resultContainer.innerHTML = "<p>Loading...</p>";
 
-    if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin brand & invoice dulu, nyet.";
+    if (!invoice) {
+      resultContainer.innerHTML = "<p>Invoice is required!</p>";
       return;
     }
 
-    resultDiv.innerHTML = "⏳ SABAR, gua lagi ngangkatin data lu...";
+    try {
+      const response = await fetch(`https://script.google.com/macros/s/YOUR_WEB_APP_URL/exec?invoice=${encodeURIComponent(invoice)}`);
+      const data = await response.json();
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti sesuai URL GAS kamu
+      if (!Array.isArray(data) || data.length === 0) {
+        resultContainer.innerHTML = "<p>No data found for this invoice.</p>";
+        return;
+      }
 
-    fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Jaringan lu eror, bro.");
-        return res.json();
-      })
-      .then((data) => {
-        if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ Invoice ${invoice} kaga ketemu, nyet.`;
-          return;
-        }
+      const filtered = brand
+        ? data.filter(row => row.Brand && row.Brand.toLowerCase().includes(brand.toLowerCase()))
+        : data;
 
-        let output = `📦 ${data.invoice}\n\n`;
-        output += `PO           | TYPE      | COLOR   | SIZE  | QTY | REMAIN | REWORK | STATUS\n`;
-        output += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
+      if (filtered.length === 0) {
+        resultContainer.innerHTML = "<p>Brand not found in this invoice.</p>";
+        return;
+      }
 
-        data.items.forEach(item => {
-          const { po, itemType, color, size, qty, remaining, rework, status } = item;
-
-          output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
-        });
-
-        output += `\n📊 Total ${data.invoice}: ${data.totalQty}`;
-        output += `\n📞 Kalau ada salah input, WA-in Emilio sekarang!`;
-
-        resultDiv.innerHTML = `<pre>${output}</pre>`;
-      })
-      .catch((err) => {
-        console.error("Fetch error:", err);
-        resultDiv.innerHTML = `⚠️ Eror pas narik data. Cek jaringan apa script URL lu deh.\n${err.message}`;
-      });
+      resultContainer.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Brand</th>
+              <th>Invoice</th>
+              <th>Model</th>
+              <th>Qty</th>
+              <th>Ready</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(item => `
+              <tr>
+                <td>${item.Brand || "-"}</td>
+                <td>${item.Invoice || "-"}</td>
+                <td>${item.Model || "-"}</td>
+                <td>${item.Qty || "-"}</td>
+                <td>${item.Ready || "-"}</td>
+                <td>${item.Status || "-"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    } catch (error) {
+      console.error(error);
+      resultContainer.innerHTML = "<p>Error fetching data.</p>";
+    }
   });
 });

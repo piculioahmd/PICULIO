@@ -26,21 +26,64 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        let output = `📦 ${data.invoice}\n\n`;
-        output += `PO           | TYPE      | COLOR   | SIZE  | QTY | REMAIN | REWORK | STATUS\n`;
-        output += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
+        let tableHTML = `
+          <style>
+            table { width: 100%; border-collapse: collapse; font-family: monospace; }
+            th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+            .green { background-color: #d4edda; }
+            .red { background-color: #f8d7da; }
+            .yellow { background-color: #fff3cd; }
+          </style>
+          <h3>📦 Invoice: ${data.invoice}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>PO</th><th>TYPE</th><th>COLOR</th><th>SIZE</th><th>QTY</th><th>IN</th><th>REMAIN</th><th>REWORK</th><th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody>`;
 
         data.items.forEach(item => {
-          const { po, itemType, color, size, qty, remaining, rework } = item;
-          const status = (remaining >= qty) ? "✅ Eksporin ae" : `❌ Masih kurang (${qty - remaining})`;
+          const { po, itemType, color, size, qty, inQty, remaining, rework, usedBy } = item;
+          let status = "";
+          let statusClass = "";
 
-          output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
+          if (remaining >= qty) {
+            status = "✅ Ready to export";
+            statusClass = "green";
+          } else if (remaining > 0) {
+            status = `⚠️ Short by (${qty - remaining})`;
+            statusClass = "yellow";
+          } else {
+            status = `❌ Not enough (${qty - remaining})`;
+            statusClass = "red";
+          }
+
+          tableHTML += `<tr class="${statusClass}">
+            <td>${po || '-'}</td>
+            <td>${itemType || '-'}</td>
+            <td>${color || '-'}</td>
+            <td>${size || '-'}</td>
+            <td>${qty}</td>
+            <td>${inQty}</td>
+            <td>${remaining}</td>
+            <td>${rework}</td>
+            <td>${status}</td>
+          </tr>`;
+
+          if (usedBy && usedBy.length > 0) {
+            tableHTML += `<tr><td colspan="9">
+              <strong>Used By:</strong><br/>
+              ${usedBy.map(u => `• ${u.invoice}: ${u.qty}`).join("<br/>")}
+            </td></tr>`;
+          }
         });
 
-        output += `\n📊 Total ${data.invoice}: ${data.totalQty}`;
-        output += `\n📞 If there is any mistake, please contact Emilio!`;
+        tableHTML += `</tbody></table>`;
+        tableHTML += `<p>📊 Total QTY: ${data.totalQty}</p>`;
+        tableHTML += `<p>📞 If anything wrong, contact Emilio!</p>`;
 
-        resultDiv.innerHTML = `<pre>${output}</pre>`;
+        resultDiv.innerHTML = tableHTML;
       })
       .catch((err) => {
         console.error("Fetch error:", err);

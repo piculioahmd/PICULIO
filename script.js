@@ -1,3 +1,4 @@
+// ✅ script.js (Untuk Vercel frontend)
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
     e.preventDefault(); // ⛔ no reload
@@ -13,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     resultDiv.innerHTML = "⏳ SABAR, gua lagi ngangkatin data lu...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // ganti dengan milikmu
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti sesuai URL GAS kamu
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then((res) => {

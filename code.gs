@@ -1,96 +1,55 @@
-// Google Apps Script for Invoice Checker with priority and QTY remaining logic
-// This version supports multi-sheet with accurate invoice readiness check
-
 function doGet(e) {
-  const result = handleInvoiceCheck(e);
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+  const ss = SpreadsheetApp.openById("PASTE_SPREADSHEET_ID_KAMU_DI_SINI");
+  const sheetNames = ["TUMI", "VICTORINOX", "BRIC'S", "AWAY"];
+  const invoiceParam = (e.parameter.invoice || "").toUpperCase().trim();
+  if (!invoiceParam) return ContentService.createTextOutput("❗Please provide invoice").setMimeType(ContentService.MimeType.TEXT);
 
-function checkInvoiceStatus(invoiceNumber) {
-  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI", "VICTORINOX"];
-  const today = new Date();
-  const resultLines = ["\uD83D\uDCE6 " + invoiceNumber + "\n"];
+  let results = [];
 
-  let grandTotal = 0;
-  let found = false;
-
-  for (const name of sheetNames) {
+  for (let name of sheetNames) {
     const sheet = ss.getSheetByName(name);
     if (!sheet) continue;
-
     const data = sheet.getDataRange().getValues();
-    const headers = data[2]; // baris ke-3 adalah header
-    const exportedRow = data[0]; // baris ke-1 untuk EXPORT STATUS
+    if (data.length <= 4) continue;
 
-    const colIndex = headers.reduce((acc, h, i) => { acc[h] = i; return acc; }, {});
-    const startCol = 12; // kolom M = 12
+    const invoiceRowIndex = data.findIndex((r, i) => i >= 4 && r.includes(invoiceParam));
+    if (invoiceRowIndex === -1) continue;
 
-    // Cari kolom untuk invoice
-    let invoiceCol = -1;
-    for (let c = startCol; c < exportedRow.length; c++) {
-      const val = (data[3][c] || "").toString().toUpperCase();
-      if (val === invoiceNumber.toUpperCase()) {
-        invoiceCol = c;
-        break;
-      }
-    }
-    if (invoiceCol === -1) continue;
+    const row = data[invoiceRowIndex];
 
-    const exportDateMap = {};
-    const invoiceDateRaw = exportedRow[invoiceCol];
-    const invoiceDate = parseDate(invoiceDateRaw);
-    const isExported = /exported/i.test(invoiceDateRaw);
+    const po       = row[1]  || '-'; // Kolom B
+    const type     = row[2]  || '-'; // Kolom C
+    const color    = row[3]  || '-'; // Kolom D
+    const size     = row[4]  || '-'; // Kolom E
+    const qty      = parseInt(row[6])  || 0;  // Kolom G - Total QTY
+    const used     = parseInt(row[7])  || 0;  // Kolom H - Already Shipped
+    const shipQty  = parseInt(row[8])  || 0;  // Kolom I - QTY for next export (can be negative)
+    const inQty    = parseInt(row[10]) || 0;  // Kolom K - QTY IN (produksi masuk)
+    const remaining = parseInt(row[11]) || 0; // Kolom L - Remaining produksi
+    const rework   = parseInt(row[12]) || 0;  // Kolom M - Rework QTY
 
-    // Hitung total invoice lebih dulu yang tanggalnya lebih awal
-    for (let c = startCol; c < exportedRow.length; c++) {
-      const inv = (data[3][c] || "").toString().toUpperCase();
-      const dateStr = exportedRow[c];
-      const date = parseDate(dateStr);
-
-      if (inv && inv !== invoiceNumber.toUpperCase() && date && (!invoiceDate || date < invoiceDate)) {
-        exportDateMap[inv] = c;
-      }
+    let status = "❌ Still short";
+    if (shipQty > 0 && remaining >= shipQty) {
+      status = "✅ Ready to export";
+    } else if (remaining < 0) {
+      status = "❌ Overused";
+    } else if (shipQty <= 0) {
+      status = "⏳ Not scheduled yet";
     }
 
-    for (let r = 4; r < data.length; r++) {
-      const row = data[r];
-      if (!row[invoiceCol]) continue;
+    const output =
+      `📦 Invoice: ${invoiceParam}\n\n` +
+      `PO\tTYPE\tCOLOR\tSIZE\tQTY\tIN\tREMAIN\tREWORK\tSTATUS\n` +
+      `${po}\t${type}\t${color}\t${size}\t${qty}\t${inQty}\t${remaining}\t${rework}\t${status}\n` +
+      `📊 Total QTY: ${qty}\n\n` +
+      `📞 If anything wrong, contact Emilio!`;
 
-      found = true;
-      const po = row[colIndex["PO"]] || "-";
-      const type = row[colIndex["TYPE"]] || "-";
-      const color = row[colIndex["COLOR"]] || "-";
-      const size = row[colIndex["SIZE"]] || "-";
-      const qty = Number(row[invoiceCol]) || 0;
-      const inQty = Number(row[colIndex["InQty"]]) || 0;
-      const rework = Number(row[colIndex["REWORK"]]) || 0;
-
-      // Hitung total used untuk invoice yang prioritasnya lebih dulu
-      let used = 0;
-      for (const [inv, col] of Object.entries(exportDateMap)) {
-        used += Number(data[r][col]) || 0;
-      }
-
-      const remaining = inQty - used;
-      const status = (!invoiceDate || qty > remaining) ? "\u274C Belum ready" : "\u2705 OK";
-
-      grandTotal += qty;
-      resultLines.push(`${po} | ${type} | ${color} | ${size} | ${qty} | ${remaining} | ${rework} | ${status}`);
-    }
+    results.push(output);
   }
 
-  if (!found) return `Invoice ${invoiceNumber} not found.`;
-  resultLines.push(`\n\uD83D\uDCCA Total ${invoiceNumber}: ${grandTotal}`);
-  resultLines.push("\uD83D\uDCDE Jika ada yang tak beres, hubungi Emilio.");
-  return resultLines.join("\n");
-}
+  if (results.length === 0) {
+    return ContentService.createTextOutput(`❌ Invoice ${invoiceParam} not found.`).setMimeType(ContentService.MimeType.TEXT);
+  }
 
-function parseDate(str) {
-  if (!str || typeof str !== "string") return null;
-  const parts = str.trim().match(/(\w+ \d{1,2}, \d{4})/);
-  if (!parts) return null;
-  const date = new Date(parts[1]);
-  return isNaN(date.getTime()) ? null : date;
+  return ContentService.createTextOutput(results.join("\n\n")).setMimeType(ContentService.MimeType.TEXT);
 }

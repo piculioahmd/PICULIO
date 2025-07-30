@@ -22,7 +22,7 @@ function doGet(e) {
 
   const rows = data.slice(1);
 
-  // Kelompokkan berdasarkan kombinasi unik item (PO+TYPE+COLOR+SIZE)
+  // Kelompokkan berdasarkan kombinasi unik item
   const grouped = {};
   rows.forEach(row => {
     const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
@@ -32,15 +32,21 @@ function doGet(e) {
     grouped[key].rows.push(row);
   });
 
-  // Alokasikan IN ke masing-masing row berdasarkan FIFO (urutan tanggal)
-  Object.values(grouped).forEach(group => {
+  // Alokasikan berdasarkan urutan tanggal (FIFO)
+  Object.entries(grouped).forEach(([key, group]) => {
     let remainingIN = group.totalIN;
 
     const sortedRows = group.rows.sort((a, b) => {
       const d1 = a[dateIndex], d2 = b[dateIndex];
-      const t1 = d1 instanceof Date ? d1.getTime() : Infinity;
-      const t2 = d2 instanceof Date ? d2.getTime() : Infinity;
-      return t1 - t2;
+      const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
+      const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
+      return v1 - v2;
+    });
+
+    // 🪵 Log urutan FIFO berdasarkan tanggal
+    Logger.log(`=== FIFO order for group: ${key} ===`);
+    sortedRows.forEach((r, i) => {
+      Logger.log(`${i + 1}. DATE: ${r[dateIndex]} | INVOICE: ${r[invoiceIndex]} | QTY: ${r[qtyIndex]} | IN: ${r[inIndex]}`);
     });
 
     sortedRows.forEach(row => {
@@ -69,7 +75,7 @@ function doGet(e) {
 
   rows.forEach(row => {
     if ((row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase()) {
-      const status = row[row.length - 1]; // status yang baru ditambahkan dengan .push()
+      const status = row[row.length - 1]; // status yang baru ditambahkan
 
       result.items.push({
         po: row[poIndex],

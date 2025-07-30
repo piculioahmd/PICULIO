@@ -9,7 +9,7 @@ function doGet(e) {
 
 function checkInvoiceStatus(invoiceNumber) {
   const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI"];
+  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI", "victorinox"];
   const today = new Date();
   const resultLines = ["\uD83D\uDCE6 " + invoiceNumber + "\n"];
 

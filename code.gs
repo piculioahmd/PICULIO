@@ -39,25 +39,32 @@ function doGet(e) {
   });
 
   // Apply accurate allocation logic
-  Object.values(grouped).forEach(group => {
-    let remainingIN = group.totalIN;
+ const dateIndex = headers.indexOf("DATE");
 
-    // Alokasikan berdasarkan kekurangan (Ready For S negatif → masih butuh)
-    group.rows.forEach(row => {
-      const readyForS = Number(row[readyForSIndex]) || 0;
-      const requestQty = Math.max(0, -readyForS);
+Object.values(grouped).forEach(group => {
+  let remainingIN = group.totalIN;
 
-      if (remainingIN <= 0) {
-        row[statusIndex] = "❌ NOT READY";
-      } else if (remainingIN >= requestQty) {
-        row[statusIndex] = "✅ OK";
-        remainingIN -= requestQty;
-      } else {
-        row[statusIndex] = `⚠️ PARTIAL (${remainingIN}/${requestQty})`;
-        remainingIN = 0;
-      }
-    });
+  const sortedRows = dateIndex >= 0
+    ? group.rows.sort((a, b) => {
+        const da = a[dateIndex], db = b[dateIndex];
+        if (!(da instanceof Date)) return 1;
+        if (!(db instanceof Date)) return -1;
+        return da - db;
+      })
+    : group.rows;
+
+  sortedRows.forEach(row => {
+    const readyForS = Number(row[readyForSIndex]) || 0;
+    const requestQty = Math.max(0, -readyForS);
+    if (remainingIN <= 0) row[statusIndex] = "❌ NOT READY";
+    else if (remainingIN >= requestQty) {
+      row[statusIndex] = "✅ OK"; remainingIN -= requestQty;
+    } else {
+      row[statusIndex] = `⚠️ PARTIAL (${remainingIN}/${requestQty})`;
+      remainingIN = 0;
+    }
   });
+});
 
   // Siapkan response JSON
   const response = {

@@ -1,5 +1,20 @@
+const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ';
+
+function doGet(e) {
+  const invoice = e.parameter.invoice;
+  const brand = e.parameter.brand;
+  if (!invoice) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'No invoice provided' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const result = getInvoiceData(invoice, brand);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function getInvoiceData(invoice, brand) {
-  const ss = SpreadsheetApp.openById(1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ);
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const allSheets = ss.getSheets();
   let found = false;
   let items = [];
@@ -9,13 +24,12 @@ function getInvoiceData(invoice, brand) {
     if (brand && sheet.getName().toLowerCase() !== brand.toLowerCase()) continue;
 
     const data = sheet.getDataRange().getValues();
-    const headerRow1 = data[0]; // Exported status
-    const headerRow2 = data[1]; // Optional (skip)
-    const headerRow3 = data[2]; // Baris invoice
+    const headerRow1 = data[0]; // EXPORT STATUS
+    const headerRow3 = data[2]; // INVOICE BARIS
     const invoiceIndex = headerRow3.indexOf(invoice);
     if (invoiceIndex === -1) continue;
 
-    // ✅ Langkah 1: Hitung qty dari invoice lain yang sudah exported (selain invoice yang dicari)
+    // 🔢 1. Hitung Used Qty dari invoice lain yang sudah diexport
     let usedQtyMap = {};
     for (let col = 12; col < headerRow3.length; col++) {
       const isExported = (headerRow1[col] || '').toString().toLowerCase().includes("exported");
@@ -28,10 +42,12 @@ function getInvoiceData(invoice, brand) {
       }
     }
 
-    // ✅ Langkah 2: Kelompokkan berdasarkan PO+TYPE+COLOR+SIZE
+    // 🔁 2. Kelompokkan berdasarkan PO+TYPE+COLOR+SIZE
     const grouped = {};
     for (let row = 3; row < data.length; row++) {
       const qty = Number(data[row][invoiceIndex]) || 0;
+      if (!qty || isNaN(qty)) continue;
+
       const po = data[row][0] || '-';
       const type = data[row][3] || '-';
       const size = data[row][4] || '-';
@@ -41,7 +57,7 @@ function getInvoiceData(invoice, brand) {
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push({
         rowIndex: row,
-        date: data[row][11], // kolom DATE = kolom L = index 11
+        date: data[row][11], // kolom DATE
         qty,
         po,
         type,
@@ -53,7 +69,7 @@ function getInvoiceData(invoice, brand) {
       });
     }
 
-    // ✅ Langkah 3: FIFO berdasarkan urutan tanggal
+    // 📦 3. FIFO berdasarkan urutan tanggal
     Object.values(grouped).forEach(groupRows => {
       const sorted = groupRows.sort((a, b) => {
         const d1 = a.date instanceof Date ? a.date.getTime() : Infinity;
@@ -64,13 +80,14 @@ function getInvoiceData(invoice, brand) {
       let remainingIN = sorted.reduce((sum, r) => sum + (r.inQty - r.usedQty), 0);
 
       for (const r of sorted) {
-        if (!r.qty || isNaN(r.qty)) continue;
+        const {
+          po, type, size, color, qty, rework, inQty, usedQty
+        } = r;
 
-        const { po, type, size, color, qty, rework, inQty, usedQty } = r;
         const available = inQty - usedQty;
         const status = (remainingIN >= qty)
           ? "✅ Ready to go"
-          : `❌ Not ready`;
+          : "❌ Not ready";
 
         items.push({
           po,
@@ -89,7 +106,7 @@ function getInvoiceData(invoice, brand) {
     });
 
     found = true;
-    break; // Hanya baca sheet pertama yang match
+    break; // hanya sheet pertama yang cocok
   }
 
   return found

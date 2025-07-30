@@ -2,14 +2,14 @@
 // This version supports multi-sheet with accurate invoice readiness check
 
 function doGet(e) {
-  const invoiceNumber = e.parameter.invoice;
-  if (!invoiceNumber) return ContentService.createTextOutput('Invoice number required');
-  return ContentService.createTextOutput(checkInvoiceStatus(invoiceNumber)).setMimeType(ContentService.MimeType.TEXT);
+  const result = handleInvoiceCheck(e);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function checkInvoiceStatus(invoiceNumber) {
   const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI", "victorinox"];
+  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI", "VICTORINOX"];
   const today = new Date();
   const resultLines = ["\uD83D\uDCE6 " + invoiceNumber + "\n"];
 

@@ -1,47 +1,54 @@
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault();
+document.getElementById("invoiceForm").addEventListener("submit", function (e) {
+  e.preventDefault();
 
-    const brand = document.getElementById("brand").value.trim();
-    const invoice = document.getElementById("invoice").value.trim().toUpperCase();
-    const resultDiv = document.getElementById("result");
+  const brand = document.getElementById("brand").value;
+  const invoice = document.getElementById("invoice").value.trim().toUpperCase();
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = "⏳ Loading...";
 
-    if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin semua, ya.";
-      return;
-    }
+  const scriptURL = "https://script.google.com/macros/s/AKfycbwPUON6iLiSGVptdO0zGv-0trCcP0nYxvX7gWj-PvYPS6MJoVoCGwMdN7VFBOvHCMAGaw/exec";
 
-    resultDiv.innerHTML = "⏳ Loading...";
+  fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data || !data.found) {
+        resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
+        return;
+      }
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzgUYB7Aa1v2ABr1iJp0iKhjga4QeODUbg-ZyJOD97DBzYkC_5Jeq72wXeJe9aVSDFM/exec";
+      let result = `📦 ${data.invoice}\n`;
+      let totalQty = 0;
 
-    fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Network error");
-        return res.json();
-      })
-      .then((data) => {
-        if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
-          return;
+      data.items.forEach((item) => {
+        const { po, itemType, color, size, qty, inQty, rework } = item;
+        let diff = qty - inQty;
+        let status = '';
+
+        if (inQty >= qty) {
+          status = '✅ Already OK';
+        } else if (rework > 0 && rework >= diff) {
+          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
+        } else if (rework > 0 && rework < diff) {
+          status = `❌ Still lacking (${diff}) with rework ${rework} pcs`;
+        } else {
+          status = `❌ Still lacking (${diff})`;
         }
 
-        let output = `📦 ${data.invoice}\n\n`;
-        output += `PO           | TYPE      | COLOR   | SIZE  | QTY  | REMAIN | REWORK | STATUS\n`;
-        output += `-------------|-----------|---------|-------|------|--------|--------|----------\n`;
+        result += `${po} ${itemType} ${color} ${size} for ${qty} ${status}\n`;
+        // Tambahkan info rework jika ada
+        if (rework > 0) {
+          status += ` | rework: ${rework} pcs`;
+        }
 
-        data.items.forEach(item => {
-          const { po, itemType, color, size, qty, remaining, rework, status } = item;
-          output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(5)}| ${String(remaining).padEnd(6)}| ${String(rework).padEnd(6)}| ${status}\n`;
-        });
-
-        output += `\n📊 Total ${data.invoice}: ${data.totalQty}`;
-        output += `\n📞 Jika ada yang tak beres, hubungi Emilio.`;
-
-        resultDiv.innerHTML = `<pre>${output}</pre>`;
-      })
-      .catch((err) => {
-        resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;
+        result += `${po} ${itemType} ${color} ${size} for ${qty} → ${status}\n`;
+        totalQty += qty;
       });
-  });
+
+      result += `\n📊 Total ${data.invoice}: ${totalQty}\n📞 If there is any mistake, please contact Emilio!`;
+      resultDiv.innerHTML = `<pre>${result}</pre>`;
+    })
+    .catch((err) => {
+      console.error("Fetch error:", err);
+      resultDiv.innerHTML = "⚠️ Error fetching data.";
+    });
 });

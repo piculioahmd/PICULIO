@@ -1,58 +1,90 @@
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // ⛔ Cegah reload halaman
+function doGet(e) {
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
 
-    const brand = document.getElementById("brand").value;
-    const invoice = document.getElementById("invoice").value.trim().toUpperCase();
-    const resultDiv = document.getElementById("result");
+  const brand = e.parameter.brand;
+  const invoice = e.parameter.invoice;
+  const sheet = ss.getSheetByName(brand);
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
 
-    if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Please enter both brand and invoice.";
-      return;
-    }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
 
-    resultDiv.innerHTML = "⏳ Checking invoice, please wait...";
+  const poIndex = headers.indexOf("PO");
+  const modelIndex = headers.indexOf("TYPE");
+  const colorIndex = headers.indexOf("COLOR");
+  const sizeIndex = headers.indexOf("SIZE");
+  const qtyIndex = headers.indexOf("QTY");
+  const inIndex = headers.indexOf("In");
+  const reworkIndex = headers.indexOf("Rework");
+  const invoiceIndex = headers.indexOf("INVOICE");
+  const readyForSIndex = headers.indexOf("Ready For S");
+  const dateIndex = headers.indexOf("DATE");
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec";
+  const rows = data.slice(1);
 
-    fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Network response was not ok");
-        return res.json();
-      })
-      .then((data) => {
-        if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
-          return;
-        }
-
-        let output = `📦 Invoice: ${data.invoice}\n\n`;
-        output += `PO           | TYPE      | COLOR   | SIZE  | QTY | IN   | REWORK | STATUS\n`;
-        output += `-------------|-----------|---------|-------|-----|------|--------|------------------------\n`;
-
-        data.items.forEach(item => {
-          const {
-            po = "-",
-            itemType = "-",
-            color = "-",
-            size = "-",
-            qty = 0,
-            remaining = 0,
-            rework = 0,
-            status = "-"
-          } = item;
-
-          output += `${po.padEnd(13)}| ${itemType.padEnd(10)}| ${color.padEnd(8)}| ${size.padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(5)}| ${String(rework).padEnd(6)}| ${status}\n`;
-        });
-
-        output += `\n📊 Total Qty for ${data.invoice}: ${data.totalQty}`;
-        output += `\n📞 If anything seems off, please contact Emilio.`;
-
-        resultDiv.innerHTML = `<pre>${output}</pre>`;
-      })
-      .catch((err) => {
-        console.error("Fetch error:", err);
-        resultDiv.innerHTML = `⚠️ Error fetching data.\n${err.message}`;
-      });
+  // Kelompokkan berdasarkan kombinasi unik item (PO+TYPE+COLOR+SIZE)
+  const grouped = {};
+  rows.forEach(row => {
+    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
+    const inVal = Number(row[inIndex]) || 0;
+    if (!grouped[key]) grouped[key] = { totalIN: 0, rows: [] };
+    grouped[key].totalIN += inVal;
+    grouped[key].rows.push(row);
   });
-});
+
+  // Alokasikan IN ke masing-masing row berdasarkan FIFO (urutan tanggal)
+  Object.values(grouped).forEach(group => {
+    let remainingIN = group.totalIN;
+
+    const sortedRows = group.rows.sort((a, b) => {
+      const d1 = a[dateIndex], d2 = b[dateIndex];
+      const t1 = d1 instanceof Date ? d1.getTime() : Infinity;
+      const t2 = d2 instanceof Date ? d2.getTime() : Infinity;
+      return t1 - t2;
+    });
+
+    sortedRows.forEach(row => {
+      const readyForS = Number(row[readyForSIndex]) || 0;
+      const requestQty = Math.max(0, -readyForS);
+
+      if (remainingIN <= 0) {
+        row.push("❌ Not ready");
+      } else if (remainingIN >= requestQty) {
+        row.push("✅ Ready to go");
+        remainingIN -= requestQty;
+      } else {
+        row.push(`⚠️ Partial (${remainingIN}/${requestQty})`);
+        remainingIN = 0;
+      }
+    });
+  });
+
+  // Filter baris sesuai invoice yang diminta
+  const result = {
+    found: true,
+    invoice: invoice,
+    items: [],
+    totalQty: 0
+  };
+
+  rows.forEach(row => {
+    if ((row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase()) {
+      const status = row[row.length - 1]; // status yang baru ditambahkan dengan .push()
+
+      result.items.push({
+        po: row[poIndex],
+        itemType: row[modelIndex],
+        color: row[colorIndex],
+        size: row[sizeIndex],
+        qty: Number(row[qtyIndex]) || 0,
+        remaining: Number(row[inIndex]) || 0,
+        rework: Number(row[reworkIndex]) || 0,
+        status: status
+      });
+
+      result.totalQty += Number(row[qtyIndex]) || 0;
+    }
+  });
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}

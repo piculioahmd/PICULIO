@@ -1,48 +1,39 @@
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("invoiceForm").addEventListener("submit", function (e) {
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("invoiceForm").addEventListener("submit", e => {
     e.preventDefault();
-
     const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
     const resultDiv = document.getElementById("result");
-
     if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin, nyet. Jan lupa";
+      resultDiv.innerHTML = "⚠️ Lengkapi brand & invoice!";
       return;
     }
-
-    resultDiv.innerHTML = "⏳ SABAR KATA GUA GEH...";
+    resultDiv.innerHTML = "⏳ Sedang memproses...";
 
     const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec";
-
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then(res => {
-        if (!res.ok) throw new Error("Network response was not ok");
+        if (!res.ok) throw new Error("Network not ok");
         return res.json();
       })
       .then(data => {
         if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ Invoice ${invoice} kaga ada nyet.`;
+          resultDiv.innerHTML = `❌ Invoice ${invoice} tidak ditemukan.`;
           return;
         }
-
-        let output = `📦 ${data.invoice}\n\n`;
-        output += `PO           | TYPE      | COLOR   | SIZE  | QTY | REMAIN | REWORK | STATUS\n`;
-        output += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
-
-        data.items.forEach(item => {
-          const { po, itemType, color, size, qty, remaining, rework, status } = item;
-          output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
+        let out = `📦 ${data.invoice}\n\n`;
+        out += `PO           | TYPE      | COLOR   | SIZE  | QTY | REMAIN | REWORK | STATUS\n`;
+        out += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
+        data.items.forEach(it => {
+          out += `${(it.po||'-').padEnd(13)}| ${(it.itemType||'-').padEnd(10)}| ${(it.color||'-').padEnd(8)}| ${(it.size||'-').padEnd(6)}| ${String(it.qty).padEnd(4)}| ${String(it.remaining).padEnd(6)}| ${String(it.rework||0).padEnd(6)}| ${it.status}\n`;
         });
-
-        output += `\n📊 Total ${data.invoice}: ${data.totalQty}`;
-        output += `\n📞 If there is any mistake, please contact Emilio!`;
-
-        resultDiv.innerHTML = `<pre>${output}</pre>`;
+        out += `\n📊 Total ${data.invoice}: ${data.totalQty}\n`;
+        out += `📞 Jika ada yang tak beres, hubungi Emilio.`;
+        resultDiv.innerHTML = `<pre>${out}</pre>`;
       })
       .catch(err => {
-        console.error("Fetch error:", err);
-        resultDiv.innerHTML = `⚠️ Error fetching data.\n${err.message}`;
+        console.error(err);
+        resultDiv.innerHTML = `⚠️ Error fetching: ${err.message}`;
       });
   });
 });

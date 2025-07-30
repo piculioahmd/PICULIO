@@ -17,58 +17,18 @@ function doGet(e) {
   const inIndex = headers.indexOf("In");
   const reworkIndex = headers.indexOf("Rework");
   const invoiceIndex = headers.indexOf("INVOICE");
-  const readyForSIndex = headers.indexOf("Ready For S");
-  const statusIndex = headers.indexOf("STATUS");
 
   const rows = data.slice(1);
-  const matchingRows = rows.filter(r => (r[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase());
+  const styles = sheet.getRange(2, qtyIndex + 1, rows.length, 1).getTextStyles(); // gaya teks QTY
+
+  const matchingRows = rows
+    .map((row, i) => ({ row, style: styles[i][0], index: i }))
+    .filter(r => (r.row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase());
 
   if (matchingRows.length === 0) {
     return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Group by PO+TYPE+COLOR+SIZE
-  const grouped = {};
-
-  rows.forEach(row => {
-    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
-    const inVal = Number(row[inIndex]) || 0;
-    if (!grouped[key]) grouped[key] = { totalIN: 0, rows: [] };
-    grouped[key].totalIN += inVal;
-    grouped[key].rows.push(row);
-  });
-
-  // Apply accurate allocation logic
-Object.values(grouped).forEach(group => {
-  let remainingIN = group.totalIN;
-
-  // Urutkan berdasarkan tanggal, kalau tidak ada DATE, urutkan default
-  const sortedRows = dateIndex >= 0
-    ? group.rows.sort((a, b) => {
-        const d1 = a[dateIndex], d2 = b[dateIndex];
-        const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
-        const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
-        return v1 - v2;
-      })
-    : group.rows;
-
-  sortedRows.forEach(row => {
-    const readyForS = Number(row[readyForSIndex]) || 0;
-    const requestQty = Math.max(0, -readyForS);
-
-    if (remainingIN <= 0) {
-      row[statusIndex] = "❌ NOT READY";
-    } else if (remainingIN >= requestQty) {
-      row[statusIndex] = "✅ OK";
-      remainingIN -= requestQty;
-    } else {
-      row[statusIndex] = `⚠️ PARTIAL (${remainingIN}/${requestQty})`;
-      remainingIN = 0;
-    }
-  });
-});
-
-  // Siapkan response JSON
   const response = {
     found: true,
     invoice: invoice,
@@ -76,7 +36,9 @@ Object.values(grouped).forEach(group => {
     totalQty: 0
   };
 
-  matchingRows.forEach(row => {
+  matchingRows.forEach(({ row, style }) => {
+    const status = style.isBold() ? "✅ Ready to go" : "❌ Not ready";
+
     response.items.push({
       po: row[poIndex],
       itemType: row[modelIndex],
@@ -85,7 +47,7 @@ Object.values(grouped).forEach(group => {
       qty: Number(row[qtyIndex]) || 0,
       remaining: Number(row[inIndex]) || 0,
       rework: Number(row[reworkIndex]) || 0,
-      status: row[statusIndex]
+      status: status
     });
     response.totalQty += Number(row[qtyIndex]) || 0;
   });

@@ -1,128 +1,64 @@
-const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ'; // ganti kalau perlu
-
-function doGet(e) {
-  const invoice = (e.parameter.invoice || '').toUpperCase().trim();
-  const brand = e.parameter.brand;
-
-  if (!invoice || !brand) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ found: false, error: 'Missing parameter' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const result = getInvoiceData(invoice, brand);
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function getInvoiceData(invoice, brand) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(brand);
-  if (!sheet) return { found: false };
-
+function checkInvoiceStatus() {
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
+  const sheet = ss.getSheetByName("AWAY", "BEIS", "BRICS", "DURAVO", "TUMI", "victorinox"); // ganti jika nama berbeda
   const data = sheet.getDataRange().getValues();
-  const headerDates = data[0];    // baris tanggal
-  const headerInvoices = data[2]; // baris invoice
 
-  let invoiceList = [];
+  // Ambil header
+  const headers = data[0];
+  const invoiceIndex = headers.indexOf("INVOICE");
+  const poIndex = headers.indexOf("PO");
+  const modelIndex = headers.indexOf("TYPE");
+  const colorIndex = headers.indexOf("COLOR");
+  const sizeIndex = headers.indexOf("SIZE");
+  const qtyIndex = headers.indexOf("QTY");
+  const inIndex = headers.indexOf("IN");
+  const statusIndex = headers.indexOf("STATUS");
+  const dateIndex = headers.indexOf("DATE"); // Tambahkan kolom tanggal invoice
 
-  for (let col = 12; col < headerInvoices.length; col++) {
-    const inv = headerInvoices[col];
-    const rawDate = headerDates[col];
-    let date = null;
+  // Kumpulkan semua baris data
+  const rows = data.slice(1);
 
-    if (rawDate instanceof Date) {
-      date = rawDate;
-    } else if (typeof rawDate === "string") {
-      const tryDate = new Date(rawDate);
-      if (!isNaN(tryDate)) date = tryDate;
+  // Kelompokkan berdasarkan PO+Model+Color+Size
+  const grouped = {};
+
+  rows.forEach(row => {
+    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
+    const qty = Number(row[qtyIndex]) || 0;
+    const date = row[dateIndex] instanceof Date ? row[dateIndex] : new Date("2999-12-31"); // fallback untuk blank
+    const invoice = row[invoiceIndex];
+    if (!grouped[key]) {
+      grouped[key] = {
+        totalIN: 0,
+        rows: []
+      };
     }
 
-    if (inv) {
-      invoiceList.push({
-        invoice: inv.toUpperCase(),
-        col,
-        date,
-        dateValue: date ? date.getTime() : Infinity
-      });
-    }
-  }
-
-  invoiceList.sort((a, b) => a.dateValue - b.dateValue); // urutkan berdasarkan tanggal, tanpa tanggal = Infinity
-
-  // Alokasi qty
-  let readyMap = {};
-  let itemMap = {};
-
-  for (let row = 3; row < data.length; row++) {
-    const totalQty = Number(data[row][6]) || 0; // kolom G
-    const readyQty = Number(data[row][10]) || 0; // kolom K
-    readyMap[row] = {
-      ready: readyQty,
-      allocated: 0
-    };
-    itemMap[row] = {
-      po: data[row][0] || '-',
-      type: data[row][3] || '-',
-      size: data[row][4] || '-',
-      color: (data[row][5] || '-').toString().split('#')[0],
-      rework: Number(data[row][9]) || 0,
-      totalQty
-    };
-  }
-
-  // Alokasikan ready qty ke semua invoice secara urut
-  let invoiceAllocMap = {};
-
-  for (const inv of invoiceList) {
-    invoiceAllocMap[inv.invoice] = [];
-
-    for (let row = 3; row < data.length; row++) {
-      const needed = Number(data[row][inv.col]) || 0;
-      if (!needed) continue;
-
-      const available = readyMap[row].ready - readyMap[row].allocated;
-      const allocatedNow = Math.min(available, needed);
-
-      invoiceAllocMap[inv.invoice].push({
-        row,
-        allocated: allocatedNow,
-        needed
-      });
-
-      readyMap[row].allocated += allocatedNow;
-    }
-  }
-
-  if (!invoiceAllocMap[invoice]) return { found: false };
-
-  // Format hasil untuk invoice yang diminta
-  const items = invoiceAllocMap[invoice].map(entry => {
-    const { row, allocated, needed } = entry;
-    const info = itemMap[row];
-    const status = (allocated >= needed)
-      ? "✅ OK"
-      : `❌ Not Ready (${needed - allocated})`;
-
-    return {
-      po: info.po,
-      itemType: info.type,
-      color: info.color,
-      size: info.size,
-      qty: needed,
-      remaining: allocated,
-      rework: info.rework,
-      status
-    };
+    grouped[key].rows.push({ qty, date, invoice, row });
   });
 
-  const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+  // Tambahkan IN dari baris mana pun yang berisi PO + Model + Color + Size + IN
+  rows.forEach(row => {
+    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
+    const inVal = Number(row[inIndex]) || 0;
+    if (grouped[key]) grouped[key].totalIN += inVal;
+  });
 
-  return {
-    found: true,
-    invoice,
-    items,
-    totalQty
-  };
+  // Proses alokasi
+  Object.values(grouped).forEach(group => {
+    let remainingIN = group.totalIN;
+    const sortedRows = group.rows.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    sortedRows.forEach(({ qty, row }) => {
+      if (remainingIN >= qty) {
+        row[statusIndex] = "✅ OK";
+        remainingIN -= qty;
+      } else {
+        row[statusIndex] = "❌ NOT READY";
+      }
+    });
+  });
+
+  // Tulis ulang ke sheet
+  const updatedData = [headers].concat(rows.map(r => r));
+  sheet.getRange(1, 1, updatedData.length, updatedData[0].length).setValues(updatedData);
 }

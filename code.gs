@@ -1,7 +1,7 @@
-const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ'; // Ganti jika spreadsheet ID kamu berbeda
+const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ'; // ganti kalau perlu
 
 function doGet(e) {
-  const invoice = e.parameter.invoice;
+  const invoice = (e.parameter.invoice || '').toUpperCase().trim();
   const brand = e.parameter.brand;
 
   if (!invoice || !brand) {
@@ -22,54 +22,102 @@ function getInvoiceData(invoice, brand) {
   if (!sheet) return { found: false };
 
   const data = sheet.getDataRange().getValues();
-  const headerRow1 = data[0]; // baris 1: cek Exported
-  const headerRow3 = data[2]; // baris 3: invoice list
-  const invoiceIndex = headerRow3.indexOf(invoice);
-  if (invoiceIndex === -1) return { found: false };
+  const headerDates = data[0];    // baris tanggal
+  const headerInvoices = data[2]; // baris invoice
 
-  // Hitung used qty dari invoice lain yang sudah exported
-  let usedQtyMap = {};
-  for (let col = 12; col < headerRow3.length; col++) {
-    const isExported = (headerRow1[col] || '').toString().toLowerCase().includes("exported");
-    const currentInvoice = headerRow3[col];
-    if (!isExported || currentInvoice === invoice) continue;
+  let invoiceList = [];
 
-    for (let row = 3; row < data.length; row++) {
-      const qtyUsed = Number(data[row][col]) || 0;
-      usedQtyMap[row] = (usedQtyMap[row] || 0) + qtyUsed;
+  for (let col = 12; col < headerInvoices.length; col++) {
+    const inv = headerInvoices[col];
+    const rawDate = headerDates[col];
+    let date = null;
+
+    if (rawDate instanceof Date) {
+      date = rawDate;
+    } else if (typeof rawDate === "string") {
+      const tryDate = new Date(rawDate);
+      if (!isNaN(tryDate)) date = tryDate;
+    }
+
+    if (inv) {
+      invoiceList.push({
+        invoice: inv.toUpperCase(),
+        col,
+        date,
+        dateValue: date ? date.getTime() : Infinity
+      });
     }
   }
 
-  let items = [];
-  let totalQty = 0;
+  invoiceList.sort((a, b) => a.dateValue - b.dateValue); // urutkan berdasarkan tanggal, tanpa tanggal = Infinity
 
-  for (let i = 3; i < data.length; i++) {
-    const qty = Number(data[i][invoiceIndex]);
-    if (!qty || isNaN(qty)) continue;
+  // Alokasi qty
+  let readyMap = {};
+  let itemMap = {};
 
-    const po = data[i][0] || '-';
-    const type = data[i][3] || '-';
-    const size = data[i][4] || '-';
-    const color = (data[i][5] || '-').toString().split('#')[0];
-    const rework = Number(data[i][9] || 0);
-    const inQty = Number(data[i][10] || 0);
-    const usedQty = usedQtyMap[i] || 0;
-    const remaining = inQty - usedQty;
-    const status = (remaining >= qty) ? "✅ OK" : `❌ Short (${qty - remaining})`;
-
-    items.push({
-      po,
-      itemType: type,
-      color,
-      size,
-      qty,
-      rework,
-      remaining,
-      status
-    });
-
-    totalQty += qty;
+  for (let row = 3; row < data.length; row++) {
+    const totalQty = Number(data[row][6]) || 0; // kolom G
+    const readyQty = Number(data[row][10]) || 0; // kolom K
+    readyMap[row] = {
+      ready: readyQty,
+      allocated: 0
+    };
+    itemMap[row] = {
+      po: data[row][0] || '-',
+      type: data[row][3] || '-',
+      size: data[row][4] || '-',
+      color: (data[row][5] || '-').toString().split('#')[0],
+      rework: Number(data[row][9]) || 0,
+      totalQty
+    };
   }
+
+  // Alokasikan ready qty ke semua invoice secara urut
+  let invoiceAllocMap = {};
+
+  for (const inv of invoiceList) {
+    invoiceAllocMap[inv.invoice] = [];
+
+    for (let row = 3; row < data.length; row++) {
+      const needed = Number(data[row][inv.col]) || 0;
+      if (!needed) continue;
+
+      const available = readyMap[row].ready - readyMap[row].allocated;
+      const allocatedNow = Math.min(available, needed);
+
+      invoiceAllocMap[inv.invoice].push({
+        row,
+        allocated: allocatedNow,
+        needed
+      });
+
+      readyMap[row].allocated += allocatedNow;
+    }
+  }
+
+  if (!invoiceAllocMap[invoice]) return { found: false };
+
+  // Format hasil untuk invoice yang diminta
+  const items = invoiceAllocMap[invoice].map(entry => {
+    const { row, allocated, needed } = entry;
+    const info = itemMap[row];
+    const status = (allocated >= needed)
+      ? "✅ OK"
+      : `❌ Not Ready (${needed - allocated})`;
+
+    return {
+      po: info.po,
+      itemType: info.type,
+      color: info.color,
+      size: info.size,
+      qty: needed,
+      remaining: allocated,
+      rework: info.rework,
+      status
+    };
+  });
+
+  const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
 
   return {
     found: true,

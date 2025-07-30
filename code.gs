@@ -17,42 +17,74 @@ function doGet(e) {
   const inIndex = headers.indexOf("In");
   const reworkIndex = headers.indexOf("Rework");
   const invoiceIndex = headers.indexOf("INVOICE");
+  const readyForSIndex = headers.indexOf("Ready For S");
+  const dateIndex = headers.indexOf("DATE");
 
   const rows = data.slice(1);
-  const styles = sheet.getRange(2, qtyIndex + 1, rows.length, 1).getTextStyles(); // gaya teks QTY
 
-  const matchingRows = rows
-    .map((row, i) => ({ row, style: styles[i][0], index: i }))
-    .filter(r => (r.row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase());
+  // Kelompokkan berdasarkan kombinasi unik item
+  const grouped = {};
+  rows.forEach(row => {
+    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
+    const inVal = Number(row[inIndex]) || 0;
+    if (!grouped[key]) grouped[key] = { totalIN: 0, rows: [] };
+    grouped[key].totalIN += inVal;
+    grouped[key].rows.push(row);
+  });
 
-  if (matchingRows.length === 0) {
-    return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
-  }
+  // Alokasikan berdasarkan urutan tanggal (FIFO)
+  Object.values(grouped).forEach(group => {
+    let remainingIN = group.totalIN;
 
-  const response = {
+    const sortedRows = group.rows.sort((a, b) => {
+      const d1 = a[dateIndex], d2 = b[dateIndex];
+      const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
+      const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
+      return v1 - v2;
+    });
+
+    sortedRows.forEach(row => {
+      const readyForS = Number(row[readyForSIndex]) || 0;
+      const requestQty = Math.max(0, -readyForS);
+
+      if (remainingIN <= 0) {
+        row.push("❌ Not ready");
+      } else if (remainingIN >= requestQty) {
+        row.push("✅ Ready to go");
+        remainingIN -= requestQty;
+      } else {
+        row.push(`⚠️ Partial (${remainingIN}/${requestQty})`);
+        remainingIN = 0;
+      }
+    });
+  });
+
+  // Filter baris sesuai invoice yang diminta
+  const result = {
     found: true,
     invoice: invoice,
     items: [],
     totalQty: 0
   };
 
-  matchingRows.forEach(({ row, style }) => {
-    const status = style.isBold() ? "✅ Ready to go" : "❌ Not ready";
+  rows.forEach(row => {
+    if ((row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase()) {
+      const status = row[row.length - 1]; // status yang baru ditambahkan di .push()
 
-    response.items.push({
-      po: row[poIndex],
-      itemType: row[modelIndex],
-      color: row[colorIndex],
-      size: row[sizeIndex],
-      qty: Number(row[qtyIndex]) || 0,
-      remaining: Number(row[inIndex]) || 0,
-      rework: Number(row[reworkIndex]) || 0,
-      status: status
-    });
-    response.totalQty += Number(row[qtyIndex]) || 0;
+      result.items.push({
+        po: row[poIndex],
+        itemType: row[modelIndex],
+        color: row[colorIndex],
+        size: row[sizeIndex],
+        qty: Number(row[qtyIndex]) || 0,
+        remaining: Number(row[inIndex]) || 0,
+        rework: Number(row[reworkIndex]) || 0,
+        status: status
+      });
+
+      result.totalQty += Number(row[qtyIndex]) || 0;
+    }
   });
 
-  return ContentService
-    .createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 }

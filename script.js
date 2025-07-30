@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // ⛔ mencegah reload!
+    e.preventDefault();
 
     const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
@@ -31,8 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
         output += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
 
         data.items.forEach(item => {
-          const { po, itemType, color, size, qty, remaining, rework } = item;
-          const status = (remaining >= qty) ? "✅ Eksporin ae" : `❌ Masih kurang (${qty - remaining})`;
+          const { po, itemType, color, size, qty, remaining, rework, status } = item;
 
           output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
         });

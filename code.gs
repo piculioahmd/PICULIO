@@ -1,115 +1,90 @@
-const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ';
-
 function doGet(e) {
-  const invoice = e.parameter.invoice;
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
+
   const brand = e.parameter.brand;
-  if (!invoice) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'No invoice provided' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+  const invoice = e.parameter.invoice;
+  const sheet = ss.getSheetByName(brand);
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
 
-  const result = getInvoiceData(invoice, brand);
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
 
-function getInvoiceData(invoice, brand) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const allSheets = ss.getSheets();
-  let found = false;
-  let items = [];
-  let totalQty = 0;
+  const poIndex = headers.indexOf("PO");
+  const modelIndex = headers.indexOf("TYPE");
+  const colorIndex = headers.indexOf("COLOR");
+  const sizeIndex = headers.indexOf("SIZE");
+  const qtyIndex = headers.indexOf("QTY");
+  const inIndex = headers.indexOf("In");
+  const reworkIndex = headers.indexOf("Rework");
+  const invoiceIndex = headers.indexOf("INVOICE");
+  const readyForSIndex = headers.indexOf("Ready For S");
+  const dateIndex = headers.indexOf("DATE");
 
-  for (const sheet of allSheets) {
-    if (brand && sheet.getName().toLowerCase() !== brand.toLowerCase()) continue;
+  const rows = data.slice(1);
 
-    const data = sheet.getDataRange().getValues();
-    const headerRow1 = data[0]; // EXPORT STATUS
-    const headerRow3 = data[2]; // INVOICE BARIS
-    const invoiceIndex = headerRow3.indexOf(invoice);
-    if (invoiceIndex === -1) continue;
+  // Kelompokkan berdasarkan kombinasi unik item
+  const grouped = {};
+  rows.forEach(row => {
+    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
+    const inVal = Number(row[inIndex]) || 0;
+    if (!grouped[key]) grouped[key] = { totalIN: 0, rows: [] };
+    grouped[key].totalIN += inVal;
+    grouped[key].rows.push(row);
+  });
 
-    // 🔢 1. Hitung Used Qty dari invoice lain yang sudah diexport
-    let usedQtyMap = {};
-    for (let col = 12; col < headerRow3.length; col++) {
-      const isExported = (headerRow1[col] || '').toString().toLowerCase().includes("exported");
-      const currentInvoice = headerRow3[col];
-      if (!isExported || currentInvoice === invoice) continue;
+  // Alokasikan berdasarkan urutan tanggal (FIFO)
+  Object.values(grouped).forEach(group => {
+    let remainingIN = group.totalIN;
 
-      for (let row = 3; row < data.length; row++) {
-        const qty = Number(data[row][col]) || 0;
-        usedQtyMap[row] = (usedQtyMap[row] || 0) + qty;
-      }
-    }
-
-    // 🔁 2. Kelompokkan berdasarkan PO+TYPE+COLOR+SIZE
-    const grouped = {};
-    for (let row = 3; row < data.length; row++) {
-      const qty = Number(data[row][invoiceIndex]) || 0;
-      if (!qty || isNaN(qty)) continue;
-
-      const po = data[row][0] || '-';
-      const type = data[row][3] || '-';
-      const size = data[row][4] || '-';
-      const color = (data[row][5] || '-').toString().split('#')[0];
-      const key = `${po}|${type}|${color}|${size}`;
-
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push({
-        rowIndex: row,
-        date: data[row][11], // kolom DATE
-        qty,
-        po,
-        type,
-        size,
-        color,
-        rework: Number(data[row][9]) || 0,
-        inQty: Number(data[row][10]) || 0,
-        usedQty: usedQtyMap[row] || 0
-      });
-    }
-
-    // 📦 3. FIFO berdasarkan urutan tanggal
-    Object.values(grouped).forEach(groupRows => {
-      const sorted = groupRows.sort((a, b) => {
-        const d1 = a.date instanceof Date ? a.date.getTime() : Infinity;
-        const d2 = b.date instanceof Date ? b.date.getTime() : Infinity;
-        return d1 - d2;
-      });
-
-      let remainingIN = sorted.reduce((sum, r) => sum + (r.inQty - r.usedQty), 0);
-
-      for (const r of sorted) {
-        const {
-          po, type, size, color, qty, rework, inQty, usedQty
-        } = r;
-
-        const available = inQty - usedQty;
-        const status = (remainingIN >= qty)
-          ? "✅ Ready to go"
-          : "❌ Not ready";
-
-        items.push({
-          po,
-          itemType: type,
-          color,
-          size,
-          qty,
-          rework,
-          remaining: available,
-          status
-        });
-
-        totalQty += qty;
-        remainingIN -= qty;
-      }
+    const sortedRows = group.rows.sort((a, b) => {
+      const d1 = a[dateIndex], d2 = b[dateIndex];
+      const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
+      const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
+      return v1 - v2;
     });
 
-    found = true;
-    break; // hanya sheet pertama yang cocok
-  }
+    sortedRows.forEach(row => {
+      const readyForS = Number(row[readyForSIndex]) || 0;
+      const requestQty = Math.max(0, -readyForS);
 
-  return found
-    ? { found: true, invoice, items, totalQty }
-    : { found: false };
+      if (remainingIN <= 0) {
+        row.push("❌ Not ready");
+      } else if (remainingIN >= requestQty) {
+        row.push("✅ Ready to go");
+        remainingIN -= requestQty;
+      } else {
+        row.push(`⚠️ Partial (${remainingIN}/${requestQty})`);
+        remainingIN = 0;
+      }
+    });
+  });
+
+  // Filter baris sesuai invoice yang diminta
+  const result = {
+    found: true,
+    invoice: invoice,
+    items: [],
+    totalQty: 0
+  };
+
+  rows.forEach(row => {
+    if ((row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase()) {
+      const status = row[row.length - 1]; // status yang baru ditambahkan di .push()
+
+      result.items.push({
+        po: row[poIndex],
+        itemType: row[modelIndex],
+        color: row[colorIndex],
+        size: row[sizeIndex],
+        qty: Number(row[qtyIndex]) || 0,
+        remaining: Number(row[inIndex]) || 0,
+        rework: Number(row[reworkIndex]) || 0,
+        status: status
+      });
+
+      result.totalQty += Number(row[qtyIndex]) || 0;
+    }
+  });
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 }

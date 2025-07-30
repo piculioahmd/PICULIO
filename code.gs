@@ -1,96 +1,98 @@
-function doGet(e) {
-  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
+function getInvoiceData(invoice, brand) {
+  const ss = SpreadsheetApp.openById(1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ);
+  const allSheets = ss.getSheets();
+  let found = false;
+  let items = [];
+  let totalQty = 0;
 
-  const brand = e.parameter.brand;
-  const invoice = e.parameter.invoice;
-  const sheet = ss.getSheetByName(brand);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
+  for (const sheet of allSheets) {
+    if (brand && sheet.getName().toLowerCase() !== brand.toLowerCase()) continue;
 
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
+    const data = sheet.getDataRange().getValues();
+    const headerRow1 = data[0]; // Exported status
+    const headerRow2 = data[1]; // Optional (skip)
+    const headerRow3 = data[2]; // Baris invoice
+    const invoiceIndex = headerRow3.indexOf(invoice);
+    if (invoiceIndex === -1) continue;
 
-  const poIndex = headers.indexOf("PO");
-  const modelIndex = headers.indexOf("TYPE");
-  const colorIndex = headers.indexOf("COLOR");
-  const sizeIndex = headers.indexOf("SIZE");
-  const qtyIndex = headers.indexOf("QTY");
-  const inIndex = headers.indexOf("In");
-  const reworkIndex = headers.indexOf("Rework");
-  const invoiceIndex = headers.indexOf("INVOICE");
-  const readyForSIndex = headers.indexOf("Ready For S");
-  const dateIndex = headers.indexOf("DATE");
+    // ✅ Langkah 1: Hitung qty dari invoice lain yang sudah exported (selain invoice yang dicari)
+    let usedQtyMap = {};
+    for (let col = 12; col < headerRow3.length; col++) {
+      const isExported = (headerRow1[col] || '').toString().toLowerCase().includes("exported");
+      const currentInvoice = headerRow3[col];
+      if (!isExported || currentInvoice === invoice) continue;
 
-  const rows = data.slice(1);
-
-  // Kelompokkan berdasarkan kombinasi unik item
-  const grouped = {};
-  rows.forEach(row => {
-    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
-    const inVal = Number(row[inIndex]) || 0;
-    if (!grouped[key]) grouped[key] = { totalIN: 0, rows: [] };
-    grouped[key].totalIN += inVal;
-    grouped[key].rows.push(row);
-  });
-
-  // Alokasikan berdasarkan urutan tanggal (FIFO)
-  Object.entries(grouped).forEach(([key, group]) => {
-    let remainingIN = group.totalIN;
-
-    const sortedRows = group.rows.sort((a, b) => {
-      const d1 = a[dateIndex], d2 = b[dateIndex];
-      const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
-      const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
-      return v1 - v2;
-    });
-
-    // 🪵 Log urutan FIFO berdasarkan tanggal
-    Logger.log(`=== FIFO order for group: ${key} ===`);
-    sortedRows.forEach((r, i) => {
-      Logger.log(`${i + 1}. DATE: ${r[dateIndex]} | INVOICE: ${r[invoiceIndex]} | QTY: ${r[qtyIndex]} | IN: ${r[inIndex]}`);
-    });
-
-    sortedRows.forEach(row => {
-      const readyForS = Number(row[readyForSIndex]) || 0;
-      const requestQty = Math.max(0, -readyForS);
-
-      if (remainingIN <= 0) {
-        row.push("❌ Not ready");
-      } else if (remainingIN >= requestQty) {
-        row.push("✅ Ready to go");
-        remainingIN -= requestQty;
-      } else {
-        row.push(`⚠️ Partial (${remainingIN}/${requestQty})`);
-        remainingIN = 0;
+      for (let row = 3; row < data.length; row++) {
+        const qty = Number(data[row][col]) || 0;
+        usedQtyMap[row] = (usedQtyMap[row] || 0) + qty;
       }
-    });
-  });
+    }
 
-  // Filter baris sesuai invoice yang diminta
-  const result = {
-    found: true,
-    invoice: invoice,
-    items: [],
-    totalQty: 0
-  };
+    // ✅ Langkah 2: Kelompokkan berdasarkan PO+TYPE+COLOR+SIZE
+    const grouped = {};
+    for (let row = 3; row < data.length; row++) {
+      const qty = Number(data[row][invoiceIndex]) || 0;
+      const po = data[row][0] || '-';
+      const type = data[row][3] || '-';
+      const size = data[row][4] || '-';
+      const color = (data[row][5] || '-').toString().split('#')[0];
+      const key = `${po}|${type}|${color}|${size}`;
 
-  rows.forEach(row => {
-    if ((row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase()) {
-      const status = row[row.length - 1]; // status yang baru ditambahkan
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push({
+        rowIndex: row,
+        date: data[row][11], // kolom DATE = kolom L = index 11
+        qty,
+        po,
+        type,
+        size,
+        color,
+        rework: Number(data[row][9]) || 0,
+        inQty: Number(data[row][10]) || 0,
+        usedQty: usedQtyMap[row] || 0
+      });
+    }
 
-      result.items.push({
-        po: row[poIndex],
-        itemType: row[modelIndex],
-        color: row[colorIndex],
-        size: row[sizeIndex],
-        qty: Number(row[qtyIndex]) || 0,
-        remaining: Number(row[inIndex]) || 0,
-        rework: Number(row[reworkIndex]) || 0,
-        status: status
+    // ✅ Langkah 3: FIFO berdasarkan urutan tanggal
+    Object.values(grouped).forEach(groupRows => {
+      const sorted = groupRows.sort((a, b) => {
+        const d1 = a.date instanceof Date ? a.date.getTime() : Infinity;
+        const d2 = b.date instanceof Date ? b.date.getTime() : Infinity;
+        return d1 - d2;
       });
 
-      result.totalQty += Number(row[qtyIndex]) || 0;
-    }
-  });
+      let remainingIN = sorted.reduce((sum, r) => sum + (r.inQty - r.usedQty), 0);
 
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+      for (const r of sorted) {
+        if (!r.qty || isNaN(r.qty)) continue;
+
+        const { po, type, size, color, qty, rework, inQty, usedQty } = r;
+        const available = inQty - usedQty;
+        const status = (remainingIN >= qty)
+          ? "✅ Ready to go"
+          : `❌ Not ready`;
+
+        items.push({
+          po,
+          itemType: type,
+          color,
+          size,
+          qty,
+          rework,
+          remaining: available,
+          status
+        });
+
+        totalQty += qty;
+        remainingIN -= qty;
+      }
+    });
+
+    found = true;
+    break; // Hanya baca sheet pertama yang match
+  }
+
+  return found
+    ? { found: true, invoice, items, totalQty }
+    : { found: false };
 }

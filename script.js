@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     resultDiv.innerHTML = "⏳ Sedang memproses...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwSmY9UBl8rWOzsR6Dsz4BneC8Tp-WPetsEV8lkNILKOwZ66BDaRXr3E3QfkWNZvYKHrQ/exec";
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then(res => {
         if (!res.ok) throw new Error("Network not ok");

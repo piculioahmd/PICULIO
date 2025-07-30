@@ -27,7 +27,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Group by PO+Model+Color+Size
+  // Group by PO+TYPE+COLOR+SIZE
   const grouped = {};
 
   rows.forEach(row => {
@@ -38,13 +38,15 @@ function doGet(e) {
     grouped[key].rows.push(row);
   });
 
-  // Hitung alokasi berdasarkan Ready For S
+  // Apply accurate allocation logic
   Object.values(grouped).forEach(group => {
     let remainingIN = group.totalIN;
 
+    // Alokasikan berdasarkan kekurangan (Ready For S negatif → masih butuh)
     group.rows.forEach(row => {
       const readyForS = Number(row[readyForSIndex]) || 0;
       const requestQty = Math.max(0, -readyForS);
+
       if (remainingIN <= 0) {
         row[statusIndex] = "❌ NOT READY";
       } else if (remainingIN >= requestQty) {
@@ -57,7 +59,7 @@ function doGet(e) {
     });
   });
 
-  // Ambil hanya yang sesuai invoice
+  // Siapkan response JSON
   const response = {
     found: true,
     invoice: invoice,

@@ -39,26 +39,28 @@ function doGet(e) {
   });
 
   // Apply accurate allocation logic
- const dateIndex = headers.indexOf("DATE");
-
 Object.values(grouped).forEach(group => {
   let remainingIN = group.totalIN;
 
+  // Urutkan berdasarkan tanggal, kalau tidak ada DATE, urutkan default
   const sortedRows = dateIndex >= 0
     ? group.rows.sort((a, b) => {
-        const da = a[dateIndex], db = b[dateIndex];
-        if (!(da instanceof Date)) return 1;
-        if (!(db instanceof Date)) return -1;
-        return da - db;
+        const d1 = a[dateIndex], d2 = b[dateIndex];
+        const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
+        const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
+        return v1 - v2;
       })
     : group.rows;
 
   sortedRows.forEach(row => {
     const readyForS = Number(row[readyForSIndex]) || 0;
     const requestQty = Math.max(0, -readyForS);
-    if (remainingIN <= 0) row[statusIndex] = "❌ NOT READY";
-    else if (remainingIN >= requestQty) {
-      row[statusIndex] = "✅ OK"; remainingIN -= requestQty;
+
+    if (remainingIN <= 0) {
+      row[statusIndex] = "❌ NOT READY";
+    } else if (remainingIN >= requestQty) {
+      row[statusIndex] = "✅ OK";
+      remainingIN -= requestQty;
     } else {
       row[statusIndex] = `⚠️ PARTIAL (${remainingIN}/${requestQty})`;
       remainingIN = 0;

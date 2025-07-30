@@ -1,55 +1,80 @@
+const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ'; // Ganti jika spreadsheet ID kamu berbeda
+
 function doGet(e) {
-  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI", "victorinox"];
-  const invoiceParam = (e.parameter.invoice || "").toUpperCase().trim();
-  if (!invoiceParam) return ContentService.createTextOutput("❗Please provide invoice").setMimeType(ContentService.MimeType.TEXT);
+  const invoice = e.parameter.invoice;
+  const brand = e.parameter.brand;
 
-  let results = [];
+  if (!invoice || !brand) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ found: false, error: 'Missing parameter' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 
-  for (let name of sheetNames) {
-    const sheet = ss.getSheetByName(name);
-    if (!sheet) continue;
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 4) continue;
+  const result = getInvoiceData(invoice, brand);
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
-    const invoiceRowIndex = data.findIndex((r, i) => i >= 4 && r.includes(invoiceParam));
-    if (invoiceRowIndex === -1) continue;
+function getInvoiceData(invoice, brand) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(brand);
+  if (!sheet) return { found: false };
 
-    const row = data[invoiceRowIndex];
+  const data = sheet.getDataRange().getValues();
+  const headerRow1 = data[0]; // baris 1: cek Exported
+  const headerRow3 = data[2]; // baris 3: invoice list
+  const invoiceIndex = headerRow3.indexOf(invoice);
+  if (invoiceIndex === -1) return { found: false };
 
-    const po       = row[1]  || '-'; // Kolom B
-    const type     = row[2]  || '-'; // Kolom C
-    const color    = row[3]  || '-'; // Kolom D
-    const size     = row[4]  || '-'; // Kolom E
-    const qty      = parseInt(row[6])  || 0;  // Kolom G - Total QTY
-    const used     = parseInt(row[7])  || 0;  // Kolom H - Already Shipped
-    const shipQty  = parseInt(row[8])  || 0;  // Kolom I - QTY for next export (can be negative)
-    const inQty    = parseInt(row[10]) || 0;  // Kolom K - QTY IN (produksi masuk)
-    const remaining = parseInt(row[11]) || 0; // Kolom L - Remaining produksi
-    const rework   = parseInt(row[12]) || 0;  // Kolom M - Rework QTY
+  // Hitung used qty dari invoice lain yang sudah exported
+  let usedQtyMap = {};
+  for (let col = 12; col < headerRow3.length; col++) {
+    const isExported = (headerRow1[col] || '').toString().toLowerCase().includes("exported");
+    const currentInvoice = headerRow3[col];
+    if (!isExported || currentInvoice === invoice) continue;
 
-    let status = "❌ Still short";
-    if (shipQty > 0 && remaining >= shipQty) {
-      status = "✅ Ready to export";
-    } else if (remaining < 0) {
-      status = "❌ Overused";
-    } else if (shipQty <= 0) {
-      status = "⏳ Not scheduled yet";
+    for (let row = 3; row < data.length; row++) {
+      const qtyUsed = Number(data[row][col]) || 0;
+      usedQtyMap[row] = (usedQtyMap[row] || 0) + qtyUsed;
     }
-
-    const output =
-      `📦 Invoice: ${invoiceParam}\n\n` +
-      `PO\tTYPE\tCOLOR\tSIZE\tQTY\tIN\tREMAIN\tREWORK\tSTATUS\n` +
-      `${po}\t${type}\t${color}\t${size}\t${qty}\t${inQty}\t${remaining}\t${rework}\t${status}\n` +
-      `📊 Total QTY: ${qty}\n\n` +
-      `📞 If anything wrong, contact Emilio!`;
-
-    results.push(output);
   }
 
-  if (results.length === 0) {
-    return ContentService.createTextOutput(`❌ Invoice ${invoiceParam} not found.`).setMimeType(ContentService.MimeType.TEXT);
+  let items = [];
+  let totalQty = 0;
+
+  for (let i = 3; i < data.length; i++) {
+    const qty = Number(data[i][invoiceIndex]);
+    if (!qty || isNaN(qty)) continue;
+
+    const po = data[i][0] || '-';
+    const type = data[i][3] || '-';
+    const size = data[i][4] || '-';
+    const color = (data[i][5] || '-').toString().split('#')[0];
+    const rework = Number(data[i][9] || 0);
+    const inQty = Number(data[i][10] || 0);
+    const usedQty = usedQtyMap[i] || 0;
+    const remaining = inQty - usedQty;
+    const status = (remaining >= qty) ? "✅ OK" : `❌ Short (${qty - remaining})`;
+
+    items.push({
+      po,
+      itemType: type,
+      color,
+      size,
+      qty,
+      rework,
+      remaining,
+      status
+    });
+
+    totalQty += qty;
   }
 
-  return ContentService.createTextOutput(results.join("\n\n")).setMimeType(ContentService.MimeType.TEXT);
+  return {
+    found: true,
+    invoice,
+    items,
+    totalQty
+  };
 }

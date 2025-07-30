@@ -1,28 +1,28 @@
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault();
+    e.preventDefault(); // ⛔ mencegah reload!
 
     const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
     const resultDiv = document.getElementById("result");
 
     if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin, nyet. Jan lupa";
+      resultDiv.innerHTML = "⚠️ Masukin semua field-nya.";
       return;
     }
 
-    resultDiv.innerHTML = "⏳ SABAR KATA GUA GEH...";
+    resultDiv.innerHTML = "⏳ Loading...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti sesuai milikmu
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti dengan URL kamu
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then((res) => {
-        if (!res.ok) throw new Error("Network response was not ok");
+        if (!res.ok) throw new Error("Network error");
         return res.json();
       })
       .then((data) => {
         if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ Invoice ${invoice} kaga ada nyet.`;
+          resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
           return;
         }
 
@@ -37,13 +37,13 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         output += `\n📊 Total ${data.invoice}: ${data.totalQty}`;
-        output += `\n📞 If there is any mistake, please contact Emilio!`;
+        output += `\n📞 Jika ada yang tak beres, hubungi Emilio.`;
 
         resultDiv.innerHTML = `<pre>${output}</pre>`;
       })
       .catch((err) => {
         console.error("Fetch error:", err);
-        resultDiv.innerHTML = `⚠️ Error fetching data.\n${err.message}`;
+        resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;
       });
   });
 });

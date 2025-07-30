@@ -1,6 +1,6 @@
 function doGet(e) {
-  const ss = SpreadsheetApp.openById("PASTE_SPREADSHEET_ID_KAMU_DI_SINI");
-  const sheetNames = ["TUMI", "VICTORINOX", "BRIC'S", "AWAY"];
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
+  const sheetNames = ["AWAY", "BEIS", "BRIC`S", "DURAVO", "TUMI", "victorinox"];
   const invoiceParam = (e.parameter.invoice || "").toUpperCase().trim();
   if (!invoiceParam) return ContentService.createTextOutput("❗Please provide invoice").setMimeType(ContentService.MimeType.TEXT);
 

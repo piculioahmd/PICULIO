@@ -1,89 +1,93 @@
 function doGet(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("IN");
+  const range = sheet.getDataRange();
+  const data = range.getValues();
+
   const brand = e.parameter.brand;
   const invoice = e.parameter.invoice;
+  if (!brand || !invoice) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: "Missing parameters" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('IN');
-  const data = sheet.getDataRange().getValues();
-
-  const today = new Date(sheet.getRange('K1').getValue());
-  const headerRow = 5; // baris header utama
+  const headerRow = 5;
   const startRow = 6;
-  const startCol = 16; // kolom P
+  const startCol = 16; // Kolom P = 16
 
-  // Buat index invoice
-  const invoiceIndex = [];
-  for (let col = startCol; col < data[4].length; col++) {
-    const inv = data[4][col];
-    const invBrand = data[0][col];
-    const invDateRaw = data[1][col];
-    let invDate = new Date("9999-12-31");
-    if (invDateRaw instanceof Date && !isNaN(invDateRaw)) invDate = invDateRaw;
-    if (invBrand === brand && inv) {
-      invoiceIndex.push({ inv, col, date: invDate });
+  const brandRow = data[0];
+  const dateRow = data[1];
+  const invoiceRow = data[4];
+
+  const invoiceColIndex = invoiceRow.findIndex(
+    (val) => val.toString().trim().toUpperCase() === invoice.toUpperCase()
+  );
+
+  if (invoiceColIndex === -1) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ found: false })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const invoiceDate = dateRow[invoiceColIndex];
+  const today = new Date(sheet.getRange("K1").getValue());
+  const exportDate = new Date(invoiceDate);
+
+  const results = [];
+  let remainingMap = {};
+
+  for (let i = startRow; i < data.length; i++) {
+    const row = data[i];
+    const rowBrand = row[3];
+    if (!rowBrand || rowBrand.toString().toUpperCase() !== brand.toUpperCase()) continue;
+
+    const key = [row[0], row[1], row[3], row[4], row[5], row[7], row[8]].join("|");
+
+    if (!remainingMap[key]) {
+      // Hitung total invoice sebelum tanggal sekarang
+      let totalUsed = 0;
+      for (let j = startCol; j < data[0].length; j++) {
+        const invDate = dateRow[j];
+        const invKey = invoiceRow[j];
+        const cellQty = parseFloat(data[i][j]) || 0;
+
+        if (
+          invKey &&
+          !isNaN(new Date(invDate)) &&
+          new Date(invDate) <= today
+        ) {
+          totalUsed += cellQty;
+        }
+      }
+      const qtyIn = parseFloat(row[9]) || 0; // kolom J
+      const reworkQty = parseFloat(row[13]) || 0; // kolom N
+      remainingMap[key] = qtyIn + reworkQty - totalUsed;
+    }
+
+    const qtyThisInvoice = parseFloat(data[i][invoiceColIndex]) || 0;
+    const status =
+      !invoiceDate
+        ? "❌ No schedule"
+        : remainingMap[key] >= qtyThisInvoice
+        ? "✅ Ready"
+        : "❌ Not enough";
+
+    if (qtyThisInvoice > 0) {
+      results.push({
+        po: row[0],
+        type: row[4],
+        color: row[7],
+        size: row[5],
+        qty: qtyThisInvoice,
+        remain: remainingMap[key],
+        rework: row[13] || 0,
+        status,
+      });
     }
   }
 
-  // Sort invoice berdasarkan tanggal
-  invoiceIndex.sort((a, b) => a.date - b.date);
-
-  // Buat cache qty tersisa
-  const remainingQtyMap = {};
-
-  // Siapkan hasil akhir
-  const result = {
-    invoice: invoice,
-    found: false,
-    totalQty: 0,
-    items: []
-  };
-
-  for (let row = startRow; row < data.length; row++) {
-    const po = data[row][0];
-    const wo = data[row][1];
-    const brandCell = data[row][3];
-    const model = data[row][4];
-    const size = data[row][5];
-    const color = data[row][7];
-    const poQty = data[row][8];
-    const inQty = data[row][9];
-    const rework = data[row][13] || 0;
-    const key = `${po}|${wo}|${brandCell}|${model}|${size}|${color}`;
-
-    if (!remainingQtyMap[key]) remainingQtyMap[key] = inQty;
-
-    for (const entry of invoiceIndex) {
-      const thisQty = data[row][entry.col];
-      if (!thisQty || typeof thisQty !== 'number') continue;
-
-      const usedQty = Math.min(thisQty, remainingQtyMap[key]);
-      const isCurrent = entry.inv === invoice;
-
-      if (usedQty > 0) {
-        remainingQtyMap[key] -= usedQty;
-      }
-
-      if (isCurrent && brandCell === brand) {
-        result.found = true;
-        result.totalQty += thisQty;
-
-        let status = '✅ Ready';
-        if (entry.date > today) status = '⏳ Scheduled';
-        if (thisQty > inQty || remainingQtyMap[key] < 0) status = '❌ Not enough';
-
-        result.items.push({
-          po,
-          itemType: model,
-          color,
-          size,
-          qty: thisQty,
-          remaining: remainingQtyMap[key],
-          rework,
-          status
-        });
-      }
-    }
-  }
-
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(
+    JSON.stringify({ found: true, invoice, results })
+  ).setMimeType(ContentService.MimeType.JSON);
 }

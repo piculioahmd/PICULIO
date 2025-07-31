@@ -1,91 +1,109 @@
 const SPREADSHEET_ID = '1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ';
 
 function doGet(e) {
-  const brand = e.parameter.brand;
-  const invoice = e.parameter.invoice;
+  const invoiceParam = (e.parameter.invoice || '').toUpperCase();
+  const brandParam = e.parameter.brand || '';
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(brand);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ found: false })).setMimeType(ContentService.MimeType.JSON);
-
+  const sheet = ss.getSheetByName('IN');
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
+  const today = sheet.getRange("K1").getValue(); // Tanggal cut-off
 
-  const poIndex = headers.indexOf("PO");
-  const modelIndex = headers.indexOf("TYPE");
-  const colorIndex = headers.indexOf("COLOR");
-  const sizeIndex = headers.indexOf("SIZE");
-  const qtyIndex = headers.indexOf("QTY");
-  const inIndex = headers.indexOf("In");
-  const reworkIndex = headers.indexOf("Rework");
-  const invoiceIndex = headers.indexOf("INVOICE");
-  const readyForSIndex = headers.indexOf("Ready For S");
-  const dateIndex = headers.indexOf("DATE");
+  const headers = data[4];
+  const rows = data.slice(5);
 
-  const rows = data.slice(1);
+  const columnMap = {
+    po: 0,
+    wo: 1,
+    partNo: 2,
+    brand: 3,
+    model: 4,
+    size: 5,
+    color: 7,
+    poQty: 8,
+    in: 9,
+    remaining: 10,
+    forShipment: 11,
+    readyForShipment: 12,
+    reworkQty: 13,
+    reworkResults: 14,
+  };
 
-  // Kelompokkan berdasarkan kombinasi unik item
-  const grouped = {};
-  rows.forEach(row => {
-    const key = `${row[poIndex]}|${row[modelIndex]}|${row[colorIndex]}|${row[sizeIndex]}`;
-    const inVal = Number(row[inIndex]) || 0;
-    if (!grouped[key]) grouped[key] = { totalIN: 0, rows: [] };
-    grouped[key].totalIN += inVal;
-    grouped[key].rows.push(row);
+  const invoiceMap = {};
+  const invoiceHeaders = data[4].slice(15); // mulai kolom P (indeks 15)
+  const brandsRow = data[0].slice(15);
+  const datesRow = data[1].slice(15);
+  const invoiceNames = invoiceHeaders;
+
+  invoiceNames.forEach((inv, i) => {
+    const invoiceName = (inv || '').toString().toUpperCase().trim();
+    if (!invoiceMap[invoiceName]) invoiceMap[invoiceName] = [];
+    invoiceMap[invoiceName].push({
+      colIndex: i + 15,
+      brand: brandsRow[i],
+      date: datesRow[i]
+    });
   });
 
-  // Alokasikan berdasarkan FIFO tanggal
-  Object.values(grouped).forEach(group => {
-    let remainingIN = group.totalIN;
+  const result = {
+    found: false,
+    invoice: invoiceParam,
+    totalQty: 0,
+    items: []
+  };
 
-    const sortedRows = group.rows.sort((a, b) => {
-      const d1 = a[dateIndex], d2 = b[dateIndex];
-      const v1 = d1 instanceof Date ? d1.getTime() : Infinity;
-      const v2 = d2 instanceof Date ? d2.getTime() : Infinity;
-      return v1 - v2;
+  const stockMap = {}; // key = PO|model|size|color
+
+  // Hitung semua invoice yang lebih awal dari K1
+  rows.forEach((row, rowIndex) => {
+    const key = [row[columnMap.po], row[columnMap.model], row[columnMap.size], row[columnMap.color]].join('|');
+    const qtyIn = Number(row[columnMap.in]) || 0;
+    const rework = Number(row[columnMap.reworkQty]) || 0;
+    let available = qtyIn + rework;
+
+    // Kurangi berdasarkan invoice lain (tanggal <= K1 dan bukan invoice yg diminta)
+    Object.keys(invoiceMap).forEach(inv => {
+      if (inv === invoiceParam) return; // skip current invoice
+
+      invoiceMap[inv].forEach(info => {
+        const exportDate = info.date;
+        const isExported = exportDate && exportDate <= today;
+
+        if (isExported) {
+          const usedQty = Number(data[rowIndex + 5][info.colIndex]) || 0;
+          available -= usedQty;
+        }
+      });
     });
 
-    sortedRows.forEach(row => {
-      const readyForS = Number(row[readyForSIndex]) || 0;
-      const requestQty = Math.max(0, -readyForS);
+    // Alokasikan untuk invoice yang dicari
+    const targetInfos = invoiceMap[invoiceParam];
+    if (!targetInfos) return;
 
-      if (remainingIN <= 0) {
-        row.push("❌ Not ready");
-      } else if (remainingIN >= requestQty) {
-        row.push("✅ Ready to go");
-        remainingIN -= requestQty;
-      } else {
-        row.push(`⚠️ Partial (${remainingIN}/${requestQty})`);
-        remainingIN = 0;
+    targetInfos.forEach(info => {
+      const usedQty = Number(data[rowIndex + 5][info.colIndex]) || 0;
+      if (usedQty > 0 && row[columnMap.brand].toUpperCase() === brandParam.toUpperCase()) {
+        const status = (available >= usedQty) ? '✅ Ready to go' :
+                      (available > 0) ? `⚠️ Partial (${available}/${usedQty})` :
+                                        '❌ Not ready';
+
+        result.found = true;
+        result.totalQty += usedQty;
+
+        result.items.push({
+          po: row[columnMap.po],
+          wo: row[columnMap.wo],
+          model: row[columnMap.model],
+          size: row[columnMap.size],
+          color: row[columnMap.color],
+          qty: usedQty,
+          in: qtyIn,
+          rework: rework,
+          status: status
+        });
       }
     });
   });
 
-  // Filter data invoice yang diminta
-  const result = {
-    found: true,
-    invoice: invoice,
-    items: [],
-    totalQty: 0
-  };
-
-  rows.forEach(row => {
-    if ((row[invoiceIndex] + '').toUpperCase() === invoice.toUpperCase()) {
-      const status = row[row.length - 1]; // status yg dipush di belakang
-
-      result.items.push({
-        po: row[poIndex],
-        itemType: row[modelIndex],
-        color: row[colorIndex],
-        size: row[sizeIndex],
-        qty: Number(row[qtyIndex]) || 0,
-        remaining: Number(row[inIndex]) || 0,
-        rework: Number(row[reworkIndex]) || 0,
-        status: status
-      });
-
-      result.totalQty += Number(row[qtyIndex]) || 0;
-    }
-  });
-
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }

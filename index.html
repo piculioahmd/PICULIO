@@ -3,27 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Invoice Checker 📦</title>
+  <title>Invoice Checker</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>📦 Invoice Checker</h1>
+    <h1>📋 Invoice Checker</h1>
     <form id="invoiceForm">
-      <select id="brand">
-        <option value="ARLO SKYE">ARLO SKYE</option>
-        <option value="AWAY">AWAY</option>
-        <option value="BEIS">BEIS</option>
-        <option value="BRIC`S">BRIC`S</option>
-        <option value="DURAVO">DURAVO</option>
-        <option value="LOJEL">LOJEL</option>
-        <option value="TUMI">TUMI</option>
-        <option value="VICTORINOX">VICTORINOX</option>
-      </select>
-      <input type="text" id="invoice" placeholder="Masukin Invoice-nya, nyet." required />
-      <button type="submit">Bismillah, ye</button>
+      <input type="text" id="brand" placeholder="Enter Brand (e.g. TUMI)" required />
+      <input type="text" id="invoice" placeholder="Enter Invoice No (e.g. INV-E2500417)" required />
+      <button type="submit">🔍 Check Invoice</button>
     </form>
-    <div id="result" class="result"></div>
+    <div id="result"></div>
   </div>
   <script src="script.js"></script>
 </body>

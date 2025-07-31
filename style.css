@@ -1,64 +1,50 @@
-.loading-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff3cd;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #856404;
-  margin-top: 20px;
+body {
+  font-family: sans-serif;
+  background: #FF90BB;
+  padding: 20px;
 }
 
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #ff69b4;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.container {
+  max-width: 500px;
+  margin: auto;
+  background: #FFC1DA;
+  padding: 2em;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.result-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-.result-table th,
-.result-table td {
-  border: 1px solid #fff;
-  padding: 8px 12px;
+h1 {
   text-align: center;
 }
 
-.result-table th {
-  background-color: #ffb6c1;
-  color: #000;
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
 }
 
-.result-table td {
-  background-color: #fff0f5;
+input, select, button {
+  padding: 0.8em;
+  font-size: 1em;
 }
 
-.invoice-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-top: 20px;
-  margin-bottom: 10px;
+button {
+  background: #F8F8E1;
+  color: rainbow;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.notfound, .alert, .error {
-  background: #f8d7da;
-  color: #721c24;
-  padding: 12px;
+.result {
+  margin-top: 1em;
+  white-space: pre-wrap;
+  font-size: 0.95em;
+  max-height: 200px;          /* batas tinggi area output */
+  overflow-y: auto;           /* scroll vertikal jika terlalu panjang */
+  word-wrap: break-word;      /* supaya kata panjang dipotong, tidak melebar */
+  background: #8ACCD5;        /* warna latar abu muda */
+  padding: 1em;
   border-radius: 8px;
-  margin-top: 20px;
-  font-weight: bold;
+  border: 1px solid #ccc;
 }

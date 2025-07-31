@@ -8,9 +8,10 @@ function doGet(e) {
   const data = sheet.getDataRange().getValues();
   const today = sheet.getRange("K1").getValue(); // Tanggal cut-off
 
-  const headers = data[4];
-  const rows = data.slice(5);
+  const headers = data[4]; // Header ada di baris ke-5
+  const rows = data.slice(5); // Data mulai dari baris ke-6
 
+  // Mapping kolom berdasarkan header
   const columnMap = {
     po: 0,
     wo: 1,
@@ -28,13 +29,14 @@ function doGet(e) {
     reworkResults: 14,
   };
 
-  const invoiceMap = {};
-  const invoiceHeaders = data[4].slice(15); // mulai kolom P (indeks 15)
+  // Ambil data invoice dari kolom P ke kanan
+  const invoiceHeaders = headers.slice(15);
   const brandsRow = data[0].slice(15);
   const datesRow = data[1].slice(15);
-  const invoiceNames = invoiceHeaders;
 
-  invoiceNames.forEach((inv, i) => {
+  const invoiceMap = {};
+
+  invoiceHeaders.forEach((inv, i) => {
     const invoiceName = (inv || '').toString().toUpperCase().trim();
     if (!invoiceMap[invoiceName]) invoiceMap[invoiceName] = [];
     invoiceMap[invoiceName].push({
@@ -51,18 +53,15 @@ function doGet(e) {
     items: []
   };
 
-  const stockMap = {}; // key = PO|model|size|color
-
-  // Hitung semua invoice yang lebih awal dari K1
   rows.forEach((row, rowIndex) => {
     const key = [row[columnMap.po], row[columnMap.model], row[columnMap.size], row[columnMap.color]].join('|');
     const qtyIn = Number(row[columnMap.in]) || 0;
     const rework = Number(row[columnMap.reworkQty]) || 0;
     let available = qtyIn + rework;
 
-    // Kurangi berdasarkan invoice lain (tanggal <= K1 dan bukan invoice yg diminta)
+    // Kurangi QTY karena invoice yang sudah diekspor (tanggal <= K1)
     Object.keys(invoiceMap).forEach(inv => {
-      if (inv === invoiceParam) return; // skip current invoice
+      if (inv === invoiceParam) return; // skip invoice target
 
       invoiceMap[inv].forEach(info => {
         const exportDate = info.date;
@@ -75,7 +74,7 @@ function doGet(e) {
       });
     });
 
-    // Alokasikan untuk invoice yang dicari
+    // Periksa apakah baris ini bagian dari invoice yang diminta
     const targetInfos = invoiceMap[invoiceParam];
     if (!targetInfos) return;
 
@@ -92,6 +91,7 @@ function doGet(e) {
         result.items.push({
           po: row[columnMap.po],
           wo: row[columnMap.wo],
+          partNo: row[columnMap.partNo],
           model: row[columnMap.model],
           size: row[columnMap.size],
           color: row[columnMap.color],

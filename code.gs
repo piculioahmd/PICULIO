@@ -1,52 +1,89 @@
 function doGet(e) {
-  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheet = ss.getSheetByName("INVOICE CHECKER");
   const brand = e.parameter.brand;
   const invoice = e.parameter.invoice;
 
-  if (!brand || !invoice) {
-    return ContentService.createTextOutput(JSON.stringify({ error: "Missing parameters" }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('IN');
+  const data = sheet.getDataRange().getValues();
 
-  const lastColumn = sheet.getLastColumn();
-  const lastRow = sheet.getLastRow();
+  const today = new Date(sheet.getRange('K1').getValue());
+  const headerRow = 5; // baris header utama
+  const startRow = 6;
+  const startCol = 16; // kolom P
 
-  const brandRow = sheet.getRange(1, 16, 1, lastColumn - 15).getValues()[0]; // Baris 1 dari kolom P (16)
-  const dateRow = sheet.getRange(2, 16, 1, lastColumn - 15).getValues()[0]; // Baris 2
-  const qtyRow = sheet.getRange(3, 16, 1, lastColumn - 15).getValues()[0]; // Baris 3
-
-  // Cari kolom yang sesuai brand
-  let brandCol = -1;
-  for (let i = 0; i < brandRow.length; i++) {
-    if (brandRow[i] && brandRow[i].toString().toUpperCase() === brand.toUpperCase()) {
-      brandCol = i + 16; // Karena mulai dari kolom P (16)
-      break;
+  // Buat index invoice
+  const invoiceIndex = [];
+  for (let col = startCol; col < data[4].length; col++) {
+    const inv = data[4][col];
+    const invBrand = data[0][col];
+    const invDateRaw = data[1][col];
+    let invDate = new Date("9999-12-31");
+    if (invDateRaw instanceof Date && !isNaN(invDateRaw)) invDate = invDateRaw;
+    if (invBrand === brand && inv) {
+      invoiceIndex.push({ inv, col, date: invDate });
     }
   }
 
-  if (brandCol === -1) {
-    return ContentService.createTextOutput(JSON.stringify({ found: false, message: `Brand ${brand} not found` }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+  // Sort invoice berdasarkan tanggal
+  invoiceIndex.sort((a, b) => a.date - b.date);
 
-  const invoices = sheet.getRange(5, brandCol, lastRow - 4).getValues(); // Baris 5 ke bawah di kolom brandCol
-  for (let i = 0; i < invoices.length; i++) {
-    if (invoices[i][0] && invoices[i][0].toString().toUpperCase() === invoice.toUpperCase()) {
-      const tanggal = dateRow[brandCol - 16];
-      const qty = qtyRow[brandCol - 16];
-      return ContentService.createTextOutput(JSON.stringify({
-        found: true,
-        brand,
-        invoice,
-        date: tanggal,
-        qty: qty
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-  }
+  // Buat cache qty tersisa
+  const remainingQtyMap = {};
 
-  return ContentService.createTextOutput(JSON.stringify({
+  // Siapkan hasil akhir
+  const result = {
+    invoice: invoice,
     found: false,
-    message: `❌ We didn't find ${invoice}. Check your data.`
-  })).setMimeType(ContentService.MimeType.JSON);
+    totalQty: 0,
+    items: []
+  };
+
+  for (let row = startRow; row < data.length; row++) {
+    const po = data[row][0];
+    const wo = data[row][1];
+    const brandCell = data[row][3];
+    const model = data[row][4];
+    const size = data[row][5];
+    const color = data[row][7];
+    const poQty = data[row][8];
+    const inQty = data[row][9];
+    const rework = data[row][13] || 0;
+    const key = `${po}|${wo}|${brandCell}|${model}|${size}|${color}`;
+
+    if (!remainingQtyMap[key]) remainingQtyMap[key] = inQty;
+
+    for (const entry of invoiceIndex) {
+      const thisQty = data[row][entry.col];
+      if (!thisQty || typeof thisQty !== 'number') continue;
+
+      const usedQty = Math.min(thisQty, remainingQtyMap[key]);
+      const isCurrent = entry.inv === invoice;
+
+      if (usedQty > 0) {
+        remainingQtyMap[key] -= usedQty;
+      }
+
+      if (isCurrent && brandCell === brand) {
+        result.found = true;
+        result.totalQty += thisQty;
+
+        let status = '✅ Ready';
+        if (entry.date > today) status = '⏳ Scheduled';
+        if (thisQty > inQty || remainingQtyMap[key] < 0) status = '❌ Not enough';
+
+        result.items.push({
+          po,
+          itemType: model,
+          color,
+          size,
+          qty: thisQty,
+          remaining: remainingQtyMap[key],
+          rework,
+          status
+        });
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 }

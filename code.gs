@@ -2,7 +2,7 @@ function doGet(e) {
   const brand = e.parameter.brand;
   const invoice = e.parameter.invoice;
   const spreadsheetId = "1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ";
-  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
   const sheet = ss.getSheetByName("IN");
 
   const headers = sheet.getRange(5, 1, 1, sheet.getLastColumn()).getValues()[0];

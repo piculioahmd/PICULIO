@@ -1,93 +1,86 @@
 function doGet(e) {
-  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheet = ss.getSheetByName("IN");
-  const range = sheet.getDataRange();
-  const data = range.getValues();
+  const ss = SpreadsheetApp.openById('1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ');
+  const sheetName = e.parameter.brand || "";
+  const invoice = e.parameter.invoice || "";
 
-  const brand = e.parameter.brand;
-  const invoice = e.parameter.invoice;
-  if (!brand || !invoice) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ error: "Missing parameters" })
-    ).setMimeType(ContentService.MimeType.JSON);
+  if (!sheetName || !invoice) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Missing brand or invoice" })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  const headerRow = 5;
-  const startRow = 6;
-  const startCol = 16; // Kolom P = 16
+  const sheet = ss.getSheetByName(sheetName);
+  const sheetIN = ss.getSheetByName("IN");
+  const data = sheet.getDataRange().getValues();
+  const headerRow = 5; // data mulai dari baris 6
+  const targetColStart = 15; // kolom P = 15
 
-  const brandRow = data[0];
-  const dateRow = data[1];
-  const invoiceRow = data[4];
+  const invoiceRow = data[4]; // baris ke-5 (index ke-4)
+  const brandRow = data[0];   // baris ke-1
+  const dateRow = data[1];    // baris ke-2
+  const totalRow = data[2];   // baris ke-3
 
-  const invoiceColIndex = invoiceRow.findIndex(
-    (val) => val.toString().trim().toUpperCase() === invoice.toUpperCase()
-  );
-
-  if (invoiceColIndex === -1) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ found: false })
-    ).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const invoiceDate = dateRow[invoiceColIndex];
   const today = new Date(sheet.getRange("K1").getValue());
-  const exportDate = new Date(invoiceDate);
 
-  const results = [];
-  let remainingMap = {};
-
-  for (let i = startRow; i < data.length; i++) {
-    const row = data[i];
-    const rowBrand = row[3];
-    if (!rowBrand || rowBrand.toString().toUpperCase() !== brand.toUpperCase()) continue;
-
-    const key = [row[0], row[1], row[3], row[4], row[5], row[7], row[8]].join("|");
-
-    if (!remainingMap[key]) {
-      // Hitung total invoice sebelum tanggal sekarang
-      let totalUsed = 0;
-      for (let j = startCol; j < data[0].length; j++) {
-        const invDate = dateRow[j];
-        const invKey = invoiceRow[j];
-        const cellQty = parseFloat(data[i][j]) || 0;
-
-        if (
-          invKey &&
-          !isNaN(new Date(invDate)) &&
-          new Date(invDate) <= today
-        ) {
-          totalUsed += cellQty;
-        }
-      }
-      const qtyIn = parseFloat(row[9]) || 0; // kolom J
-      const reworkQty = parseFloat(row[13]) || 0; // kolom N
-      remainingMap[key] = qtyIn + reworkQty - totalUsed;
-    }
-
-    const qtyThisInvoice = parseFloat(data[i][invoiceColIndex]) || 0;
-    const status =
-      !invoiceDate
-        ? "❌ No schedule"
-        : remainingMap[key] >= qtyThisInvoice
-        ? "✅ Ready"
-        : "❌ Not enough";
-
-    if (qtyThisInvoice > 0) {
-      results.push({
-        po: row[0],
-        type: row[4],
-        color: row[7],
-        size: row[5],
-        qty: qtyThisInvoice,
-        remain: remainingMap[key],
-        rework: row[13] || 0,
-        status,
-      });
+  // Cari kolom tempat invoice
+  let colIndex = -1;
+  for (let c = targetColStart; c < invoiceRow.length; c++) {
+    if (String(invoiceRow[c]).toUpperCase().trim() === invoice) {
+      colIndex = c;
+      break;
     }
   }
 
-  return ContentService.createTextOutput(
-    JSON.stringify({ found: true, invoice, results })
-  ).setMimeType(ContentService.MimeType.JSON);
+  if (colIndex === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Invoice not found" })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const invoiceDate = new Date(dateRow[colIndex]);
+  const entries = [];
+
+  for (let r = headerRow; r < data.length; r++) {
+    const po = data[r][0];
+    const wo = data[r][1];
+    const model = data[r][3];
+    const size = data[r][4];
+    const color = data[r][5];
+    const poQty = Number(data[r][6]);
+    const inQty = Number(data[r][10]);
+    const remaining = Number(data[r][11]);
+    const rework = Number(data[r][12]);
+    const thisINV = Number(data[r][colIndex]) || 0;
+
+    if (!po || thisINV === 0) continue;
+
+    // Hitung pemakaian oleh invoice lain sebelum atau sama dengan tanggal ini
+    let usedQty = 0;
+    for (let c = targetColStart; c < data[4].length; c++) {
+      const otherDate = new Date(dateRow[c]);
+      const otherInv = String(invoiceRow[c]).toUpperCase().trim();
+
+      if (c !== colIndex && otherDate <= invoiceDate) {
+        usedQty += Number(data[r][c]) || 0;
+      }
+    }
+
+    const availableQty = inQty - usedQty;
+    const status = availableQty >= thisINV ? "✅ Ready to Export" : "❌ Not Ready";
+
+    entries.push({
+      po,
+      wo,
+      model,
+      size,
+      color,
+      qty: thisINV,
+      remaining,
+      forThisINV: availableQty,
+      rework,
+      status
+    });
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    invoice,
+    brand: sheetName,
+    entries
+  })).setMimeType(ContentService.MimeType.JSON);
 }

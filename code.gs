@@ -1,86 +1,68 @@
 function doGet(e) {
-  const ss = SpreadsheetApp.openById('1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ');
-  const sheetName = e.parameter.brand || "";
-  const invoice = e.parameter.invoice || "";
+  const brand = e.parameter.brand;
+  const invoice = e.parameter.invoice;
+  const spreadsheetId = "1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ";
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = ss.getSheetByName("IN");
 
-  if (!sheetName || !invoice) {
-    return ContentService.createTextOutput(JSON.stringify({ error: "Missing brand or invoice" })).setMimeType(ContentService.MimeType.JSON);
+  const headers = sheet.getRange(5, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const data = sheet.getRange(6, 1, sheet.getLastRow() - 5, sheet.getLastColumn()).getValues();
+  const dateRef = new Date(sheet.getRange("K1").getValue());
+
+  const invoiceColRow = sheet.getRange(5, 16, 1, sheet.getLastColumn()).getValues()[0];
+  const exportDateRow = sheet.getRange(2, 16, 1, sheet.getLastColumn()).getValues()[0];
+  const exportedRow = sheet.getRange(3, 16, 1, sheet.getLastColumn()).getValues()[0];
+
+  let result = [];
+  let ready = true;
+
+  const invoiceIndex = invoiceColRow.findIndex(v => v === invoice);
+  if (invoiceIndex === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "not found" }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
-  const sheet = ss.getSheetByName(sheetName);
-  const sheetIN = ss.getSheetByName("IN");
-  const data = sheet.getDataRange().getValues();
-  const headerRow = 5; // data mulai dari baris 6
-  const targetColStart = 15; // kolom P = 15
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const qtyNeeded = row[6]; // PO QTY
+    const inQty = row[10]; // QTY IN (K)
+    const rework = row[11] || 0; // L
+    const type = row[3];
+    const size = row[4];
+    const color = row[5];
+    const po = row[0];
 
-  const invoiceRow = data[4]; // baris ke-5 (index ke-4)
-  const brandRow = data[0];   // baris ke-1
-  const dateRow = data[1];    // baris ke-2
-  const totalRow = data[2];   // baris ke-3
-
-  const today = new Date(sheet.getRange("K1").getValue());
-
-  // Cari kolom tempat invoice
-  let colIndex = -1;
-  for (let c = targetColStart; c < invoiceRow.length; c++) {
-    if (String(invoiceRow[c]).toUpperCase().trim() === invoice) {
-      colIndex = c;
-      break;
-    }
-  }
-
-  if (colIndex === -1) {
-    return ContentService.createTextOutput(JSON.stringify({ error: "Invoice not found" })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const invoiceDate = new Date(dateRow[colIndex]);
-  const entries = [];
-
-  for (let r = headerRow; r < data.length; r++) {
-    const po = data[r][0];
-    const wo = data[r][1];
-    const model = data[r][3];
-    const size = data[r][4];
-    const color = data[r][5];
-    const poQty = Number(data[r][6]);
-    const inQty = Number(data[r][10]);
-    const remaining = Number(data[r][11]);
-    const rework = Number(data[r][12]);
-    const thisINV = Number(data[r][colIndex]) || 0;
-
-    if (!po || thisINV === 0) continue;
-
-    // Hitung pemakaian oleh invoice lain sebelum atau sama dengan tanggal ini
+    // Hitung total qty dari semua invoice yang tanggal export <= K1 dan sudah exported
     let usedQty = 0;
-    for (let c = targetColStart; c < data[4].length; c++) {
-      const otherDate = new Date(dateRow[c]);
-      const otherInv = String(invoiceRow[c]).toUpperCase().trim();
+    for (let c = 15; c < sheet.getLastColumn(); c++) {
+      const invDate = exportDateRow[c - 15];
+      const invExported = exportedRow[c - 15];
+      const invQty = data[i][c];
 
-      if (c !== colIndex && otherDate <= invoiceDate) {
-        usedQty += Number(data[r][c]) || 0;
+      if (invDate && new Date(invDate) <= dateRef && invExported === "Y") {
+        usedQty += parseInt(invQty || 0);
       }
     }
 
-    const availableQty = inQty - usedQty;
-    const status = availableQty >= thisINV ? "✅ Ready to Export" : "❌ Not Ready";
+    const remaining = inQty - usedQty;
+    const forThisInvoice = data[i][15 + invoiceIndex] || 0;
+    const status = (remaining >= forThisInvoice ? "✅ OK" : "❌ Short");
 
-    entries.push({
-      po,
-      wo,
-      model,
-      size,
-      color,
-      qty: thisINV,
-      remaining,
-      forThisINV: availableQty,
-      rework,
-      status
-    });
+    if (remaining < forThisInvoice) ready = false;
+
+    if (forThisInvoice > 0) {
+      result.push({
+        po, type, size, color,
+        qty: qtyNeeded,
+        remaining,
+        forThisInvoice,
+        rework,
+        status
+      });
+    }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({
-    invoice,
-    brand: sheetName,
-    entries
-  })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: "ok", ready, items: result }))
+    .setMimeType(ContentService.MimeType.JSON);
 }

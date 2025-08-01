@@ -1,63 +1,56 @@
 document.addEventListener("DOMContentLoaded", function () {
-  const form = document.getElementById("invoiceForm");
-  const resultDiv = document.getElementById("result");
-
-  form.addEventListener("submit", async function (e) {
-    e.preventDefault();
+  document.getElementById("invoiceForm").addEventListener("submit", function (e) {
+    e.preventDefault(); // ⛔ mencegah reload!
 
     const brand = document.getElementById("brand").value.trim();
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
+    const resultDiv = document.getElementById("result");
 
-    resultDiv.innerHTML = "⏳ Checking...";
-
-    try {
-      const response = await fetch(
-        `https://script.google.com/macros/s/PASTE_YOUR_DEPLOYED_URL_HERE/exec?brand=${brand}&invoice=${invoice}`
-      );
-      const data = await response.json();
-
-      if (data.status === "not found") {
-        resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
-        return;
-      }
-
-      // Buat tampilan tabel
-      let html = `<div><strong>📦 ${invoice}</strong></div>`;
-      html += `<table>
-        <thead>
-          <tr>
-            <th>PO</th>
-            <th>TYPE</th>
-            <th>COLOR</th>
-            <th>SIZE</th>
-            <th>QTY</th>
-            <th>REMAINING</th>
-            <th>For this INV</th>
-            <th>REWORK</th>
-            <th>STATUS</th>
-          </tr>
-        </thead><tbody>`;
-
-      data.items.forEach(item => {
-        html += `<tr>
-          <td>${item.po}</td>
-          <td>${item.type}</td>
-          <td>${item.color}</td>
-          <td>${item.size}</td>
-          <td>${item.qty}</td>
-          <td>${item.remaining}</td>
-          <td>${item.forThisInvoice}</td>
-          <td>${item.rework}</td>
-          <td>${item.status}</td>
-        </tr>`;
-      });
-
-      html += "</tbody></table>";
-      html += `<div class="status">${data.ready ? "✅ Ready to Export" : "❌ Not Ready to Export"}</div>`;
-
-      resultDiv.innerHTML = html;
-    } catch (error) {
-      resultDiv.innerHTML = `⚠️ Error fetching data: ${error.message}`;
+    if (!brand || !invoice) {
+      resultDiv.innerHTML = "⚠️ Masukin semua field-nya.";
+      return;
     }
+
+    resultDiv.innerHTML = "⏳ Loading...";
+
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwwQCm-ibzKDocP2Z-37QztkLxowyns8MelCw99D9OcLQQAA01BxIGg18S8RdbpRcfTWA/exec"; // Ganti dengan URL kamu
+
+    fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Network error");
+        return res.json();
+      })
+      .then((data) => {
+        if (!data || !data.found) {
+          resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
+          return;
+        }
+
+        let output = `📦 Invoice: ${invoice}\n\n`;
+        output += `PO            | MODEL     | COLOR   | SIZE | QTY | REMAIN | FOR THIS INV | REWORK | STATUS\n`;
+        output += `--------------|-----------|---------|------|-----|--------|---------------|--------|--------\n`;
+
+        data.results.forEach(item => {
+          const po = (item.po || "-").padEnd(14);
+          const type = (item.type || "-").padEnd(10);
+          const color = (item.color || "-").padEnd(9);
+          const size = (item.size || "-").padEnd(5);
+          const qty = String(item.qty).padEnd(4);
+          const remain = String(item.remain).padEnd(6);
+          const forThis = String(item.forThis || 0).padEnd(13);
+          const rework = String(item.rework || 0).padEnd(6);
+          const status = item.status;
+
+          output += `${po}| ${type}| ${color}| ${size}| ${qty}| ${remain}| ${forThis}| ${rework}| ${status}\n`;
+        });
+
+        output += `\n📞 Jika ada yang tak beres, hubungi Emilio.`;
+
+        resultDiv.innerHTML = `<pre>${output}</pre>`;
+      })
+      .catch((err) => {
+        console.error("Fetch error:", err);
+        resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;
+      });
   });
 });

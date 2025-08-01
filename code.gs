@@ -1,24 +1,23 @@
 function doGet(e) {
-  const spreadsheetId = "1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ";
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
   const sheet = ss.getSheetByName("IN");
-  const range = sheet.getDataRange();
-  const data = range.getValues();
+  const data = sheet.getDataRange().getValues();
 
   const brand = e.parameter.brand;
   const invoice = e.parameter.invoice;
+
   if (!brand || !invoice) {
     return ContentService.createTextOutput(
-      JSON.stringify({ error: "Missing parameters" })
+      JSON.stringify({ error: "Missing parameters", found: false })
     ).setMimeType(ContentService.MimeType.JSON);
   }
 
   const headerRow = 5;
   const startRow = 6;
-  const startCol = 16; // Kolom P = 16
+  const startCol = 16; // Kolom P
 
-  const brandRow = data[0];
-  const dateRow = data[1];
-  const invoiceRow = data[4];
+  const dateRow = data[1];    // Baris ke-2
+  const invoiceRow = data[4]; // Baris ke-5
 
   const invoiceColIndex = invoiceRow.findIndex(
     (val) => val.toString().trim().toUpperCase() === invoice.toUpperCase()
@@ -30,12 +29,10 @@ function doGet(e) {
     ).setMimeType(ContentService.MimeType.JSON);
   }
 
-  const invoiceDate = dateRow[invoiceColIndex];
   const today = new Date(sheet.getRange("K1").getValue());
-  const exportDate = new Date(invoiceDate);
-
+  const invoiceDate = dateRow[invoiceColIndex];
   const results = [];
-  let remainingMap = {};
+  const remainingMap = {};
 
   for (let i = startRow; i < data.length; i++) {
     const row = data[i];
@@ -45,28 +42,23 @@ function doGet(e) {
     const key = [row[0], row[1], row[3], row[4], row[5], row[7], row[8]].join("|");
 
     if (!remainingMap[key]) {
-      // Hitung total invoice sebelum atau sama dengan tanggal hari ini
       let totalUsed = 0;
       for (let j = startCol; j < data[0].length; j++) {
         const invDate = dateRow[j];
         const invKey = invoiceRow[j];
         const cellQty = parseFloat(data[i][j]) || 0;
 
-        if (
-          invKey &&
-          !isNaN(new Date(invDate)) &&
-          new Date(invDate) <= today
-        ) {
+        if (invKey && !isNaN(new Date(invDate)) && new Date(invDate) <= today) {
           totalUsed += cellQty;
         }
       }
-      const qtyIn = parseFloat(row[9]) || 0; // kolom J
+      const qtyIn = parseFloat(row[9]) || 0;     // kolom J
       const reworkQty = parseFloat(row[13]) || 0; // kolom N
       remainingMap[key] = qtyIn + reworkQty - totalUsed;
     }
 
     const qtyThisInvoice = parseFloat(data[i][invoiceColIndex]) || 0;
-    const forThis = remainingMap[key]; // forThis = sisa yang dialokasikan ke invoice ini
+    const forThis = remainingMap[key];
     const status =
       !invoiceDate
         ? "❌ No schedule"
@@ -81,7 +73,7 @@ function doGet(e) {
         color: row[7],
         size: row[5],
         qty: qtyThisInvoice,
-        remain: row[10],       // kolom K (Remaining dari Sheet)
+        remain: row[10],         // kolom K
         forThis,
         rework: row[13] || 0,
         status,

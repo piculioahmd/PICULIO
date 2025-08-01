@@ -1,5 +1,5 @@
 function doGet(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
   const sheet = ss.getSheetByName("IN");
   const range = sheet.getDataRange();
   const data = range.getValues();

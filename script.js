@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
     e.preventDefault(); // ⛔ mencegah reload!
 
-    const brand = document.getElementById("brand").value.trim();
+    const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
     const resultDiv = document.getElementById("result");
 
@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     resultDiv.innerHTML = "⏳ Loading...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbxYDs-vmfa5Ze-jJycei2Ont44Bp0XD8anbUAdr7CjPyGrEkB8Wu2x2gNXsm8_OSzjabQ/exec"; // Ganti dengan URL kamu
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwiXZXtrn3iR97nrSaKmf61jMSK6-N6DAQLW3v9TNBJv15__DjSoz5FeHyUBG7NZpTcPA/exec";
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then((res) => {

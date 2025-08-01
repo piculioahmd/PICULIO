@@ -27,26 +27,47 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const items = data.results;
+        let allReady = true;
+
         let html = `<h2>📦 ${invoice}</h2>`;
-        html += `<table><thead><tr>
-            <th>PO</th><th>TYPE</th><th>COLOR</th><th>SIZE</th>
-            <th>QTY</th><th>REMAIN</th><th>REWORK</th><th>STATUS</th>
-          </tr></thead><tbody>`;
+        html += `<div style="overflow-x:auto;"><table style="border-collapse: collapse; width: 100%; font-family: monospace;">
+          <thead style="background-color: #f2f2f2;">
+            <tr>
+              <th style="padding: 8px; border: 1px solid #ccc;">PO</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">TYPE</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">COLOR</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">SIZE</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">QTY</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">REMAIN</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">REWORK</th>
+              <th style="padding: 8px; border: 1px solid #ccc;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>`;
 
         items.forEach(item => {
+          const isReady = item.status.includes("✅");
+          if (!isReady) allReady = false;
+
           html += `<tr>
-            <td>${item.po}</td>
-            <td>${item.type}</td>
-            <td>${item.color}</td>
-            <td>${item.size}</td>
-            <td>${item.qty}</td>
-            <td>${item.remain}</td>
-            <td>${item.rework}</td>
-            <td>${item.status}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.po}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.type}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.color}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.size}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.qty}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.remain}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.rework}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${item.status}</td>
           </tr>`;
         });
 
-        html += "</tbody></table>";
+        html += `</tbody></table></div><br/>`;
+
+        html += `<p><strong>📦 INVOICE STATUS: ${
+          allReady ? "✅ Ready to Export" : "❌ Not Ready to Export"
+        }</strong></p>`;
+        html += `<p>📞 Jika ada yang tak beres, hubungi Emilio.</p>`;
+
         resultDiv.innerHTML = html;
       })
       .catch(() => {

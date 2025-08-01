@@ -20,34 +20,43 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!res.ok) throw new Error("Network error");
         return res.json();
       })
-      .then((data) => {
-        if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
-          return;
-        }
+.then((data) => {
+  if (!data || !data.found) {
+    resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
+    return;
+  }
 
-        let output = `📦 Invoice: ${invoice}\n\n`;
-        output += `PO            | MODEL     | COLOR   | SIZE | QTY | REMAIN | FOR THIS INV | REWORK | STATUS\n`;
-        output += `--------------|-----------|---------|------|-----|--------|---------------|--------|--------\n`;
+  const rows = data.results.map(item => `
+    <tr>
+      <td>${item.po}</td>
+      <td>${item.type}</td>
+      <td>${item.color}</td>
+      <td>${item.size}</td>
+      <td>${item.qty}</td>
+      <td>${item.remain}</td>
+      <td>${item.forThis}</td>
+      <td>${item.rework}</td>
+      <td>${item.status}</td>
+    </tr>
+  `).join("");
 
-        data.results.forEach(item => {
-          const po = (item.po || "-").padEnd(14);
-          const type = (item.type || "-").padEnd(10);
-          const color = (item.color || "-").padEnd(9);
-          const size = (item.size || "-").padEnd(5);
-          const qty = String(item.qty).padEnd(4);
-          const remain = String(item.remain).padEnd(6);
-          const forThis = String(item.forThis || 0).padEnd(13);
-          const rework = String(item.rework || 0).padEnd(6);
-          const status = item.status;
+  const output = `
+    <h3>📦 Invoice: ${invoice}</h3>
+    <table class="result-table">
+      <thead>
+        <tr>
+          <th>PO</th><th>MODEL</th><th>COLOR</th><th>SIZE</th>
+          <th>QTY</th><th>REMAIN</th><th>FOR THIS INV</th><th>REWORK</th><th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p>📞 Jika ada yang tak beres, hubungi Emilio.</p>
+  `;
 
-          output += `${po}| ${type}| ${color}| ${size}| ${qty}| ${remain}| ${forThis}| ${rework}| ${status}\n`;
-        });
+  resultDiv.innerHTML = output;
+})
 
-        output += `\n📞 Jika ada yang tak beres, hubungi Emilio.`;
-
-        resultDiv.innerHTML = `<pre>${output}</pre>`;
-      })
       .catch((err) => {
         console.error("Fetch error:", err);
         resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;

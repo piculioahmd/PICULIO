@@ -4,71 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Invoice Checker</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    h1 {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-    form {
-      margin-bottom: 20px;
-    }
-    input, button {
-      padding: 10px;
-      font-size: 14px;
-      margin-right: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    button {
-      background-color: #0066cc;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #004c99;
-    }
-    .result {
-      background-color: white;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f0f0f0;
-    }
-    .status {
-      font-weight: bold;
-      font-size: 16px;
-      margin-top: 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>📦 Invoice Export Checker</h1>
-  <form id="invoiceForm">
-    <input type="text" id="brand" placeholder="Brand (e.g., TUMI)" required />
-    <input type="text" id="invoice" placeholder="Invoice No (e.g., INV-E2500417)" required />
-    <button type="submit">Check</button>
-  </form>
-  <div id="result" class="result"></div>
-
+  <div class="container">
+    <h1>📦 Invoice Checker</h1>
+    <form id="invoiceForm">
+      <input type="text" id="brand" placeholder="Brand (e.g., TUMI)" required />
+      <input type="text" id="invoice" placeholder="Invoice No (e.g., INV-E2500417)" required />
+      <button type="submit">Check</button>
+    </form>
+    <div id="result" class="result"></div>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>

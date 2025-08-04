@@ -14,7 +14,7 @@ function doGet(e) {
 
   const headerRow = 5;
   const startRow = 6;
-  const startCol = 16; // Kolom P
+  const startCol = 15; // Kolom O
 
   const dateRow = data[1];    // Baris ke-2
   const invoiceRow = data[4]; // Baris ke-5

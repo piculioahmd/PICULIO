@@ -44,7 +44,43 @@ document.addEventListener("DOMContentLoaded", function () {
         `).join("");
 
         const output = `
-          <div class="result-container">
+          <style>
+            .result-box {
+              background: #ffd6d6;
+              padding: 20px;
+              border-radius: 12px;
+              font-family: Arial, sans-serif;
+              color: #222;
+              max-width: 800px;
+              margin: auto;
+              border: 1px solid #e75480;
+            }
+            .result-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 10px;
+            }
+            .result-table th, .result-table td {
+              border: 1px solid #aaa;
+              padding: 6px 10px;
+              text-align: center;
+            }
+            .result-table th {
+              background: #ff9a9a;
+              font-weight: bold;
+            }
+            .result-table tbody tr:nth-child(even) {
+              background: #fff3f3;
+            }
+            .summary-block {
+              font-weight: bold;
+              text-align: left;
+            }
+            .contact {
+              margin-top: 3px;
+            }
+          </style>
+          <div class="result-box">
             <h3>📦 Invoice: ${invoice}</h3>
             <table class="result-table">
               <thead>
@@ -55,8 +91,8 @@ document.addEventListener("DOMContentLoaded", function () {
               </thead>
               <tbody>${rows}</tbody>
             </table>
-            <p class="summary">Total: ${totalQty} PCS of Luggages</p>
-            <p>📞 Jika ada yang tak beres, hubungi Emilio.</p>
+            <p class="summary-block">Total: ${totalQty} PCS of Luggages</p>
+            <p class="contact">📞 Jika ada yang tak beres, hubungi Emilio.</p>
           </div>
         `;
 

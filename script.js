@@ -20,43 +20,48 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!res.ok) throw new Error("Network error");
         return res.json();
       })
-.then((data) => {
-  if (!data || !data.found) {
-    resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
-    return;
-  }
+      .then((data) => {
+        if (!data || !data.found) {
+          resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
+          return;
+        }
 
-  const rows = data.results.map(item => `
-    <tr>
-      <td>${item.po}</td>
-      <td>${item.type}</td>
-      <td>${item.color}</td>
-      <td>${item.size}</td>
-      <td>${item.qty}</td>
-      <td>${item.remain}</td>
-      <td>${item.forThis}</td>
-      <td>${item.rework}</td>
-      <td>${item.status}</td>
-    </tr>
-  `).join("");
+        // Hitung total QTY FOR THIS INV
+        const totalQty = data.results.reduce((sum, item) => sum + (parseInt(item.forThis) || 0), 0);
 
-  const output = `
-    <h3>📦 Invoice: ${invoice}</h3>
-    <table class="result-table">
-      <thead>
-        <tr>
-          <th>PO</th><th>MODEL</th><th>COLOR</th><th>SIZE</th>
-          <th>QTY</th><th>REMAIN</th><th>FOR THIS INV</th><th>REWORK</th><th>STATUS</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <p>📞 Jika ada yang tak beres, hubungi Emilio.</p>
-  `;
+        const rows = data.results.map(item => `
+          <tr>
+            <td>${item.po}</td>
+            <td>${item.type}</td>
+            <td>${item.color}</td>
+            <td>${item.size}</td>
+            <td>${item.qty}</td>
+            <td>${item.remain}</td>
+            <td>${item.forThis}</td>
+            <td>${item.rework}</td>
+            <td>${item.status}</td>
+          </tr>
+        `).join("");
 
-  resultDiv.innerHTML = output;
-})
+        const output = `
+          <div class="result-container">
+            <h3>📦 Invoice: ${invoice}</h3>
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th>PO</th><th>MODEL</th><th>COLOR</th><th>SIZE</th>
+                  <th>QTY</th><th>REMAIN</th><th>FOR THIS INV</th><th>REWORK</th><th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <p class="summary">Total: ${totalQty} PCS of Luggages</p>
+            <p>📞 Jika ada yang tak beres, hubungi Emilio.</p>
+          </div>
+        `;
 
+        resultDiv.innerHTML = output;
+      })
       .catch((err) => {
         console.error("Fetch error:", err);
         resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;

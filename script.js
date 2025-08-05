@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     resultDiv.innerHTML = "⏳ Loading...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwiXZXtrn3iR97nrSaKmf61jMSK6-N6DAQLW3v9TNBJv15__DjSoz5FeHyUBG7NZpTcPA/exec";
+    const scriptURL = "YOUR_DEPLOYED_WEBAPP_URL"; // ganti dengan URL Apps Script
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then(res => {
@@ -26,58 +26,70 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
+        // Ambil tanggal ekspor dari Apps Script
+        const exportDate = data.exportDate || "N/A";
+
         let totalQty = 0;
 
-        // Header
-        let output = `PO | TYPE | COLOR | SIZE | QTY | REMAIN | REWORK | STATUS\n`;
-
-        // Format per item
-        data.results.forEach(item => {
-          const po = item.po || "";             // kolom A
-          const type = item.type || "";         // kolom E
-          const color = item.color || "";       // kolom I
-          const size = item.size || "";         // kolom F
-          const qty = parseInt(item.qty) || 0;  // kolom INV (matching invoice)
-          const remain = item.remain || "";     // kolom K
-          const rework = parseInt(item.reworkQty) || 0; // kolom N
+        const rows = data.results.map(item => {
+          const po = item.po || "";
+          const type = item.type || "";
+          const color = item.color || "";
+          const size = item.size || "";
+          const qty = parseInt(item.qty) || 0;        // alokasi untuk invoice ini
+          const forThis = parseInt(item.forThis) || 0; // stok tersedia
+          const remain = parseInt(item.remain) || 0;   // kolom K
+          const rework = parseInt(item.rework) || 0;   // kolom N
+          const status = item.status || "";
 
           totalQty += qty;
 
-          // Logika status
-          let status;
-          if (qty >= parseInt(item.poQty || qty)) {
-            status = "✅ Already OK";
-          } else if (qty + rework >= parseInt(item.poQty || qty)) {
-            status = `✅ Already OK with Rework ${rework} pcs`;
-          } else if (rework > 0) {
-            const diff = (parseInt(item.poQty || qty) - qty);
-            status = `❌ Still lacking (${diff}) with Rework ${rework} pcs`;
-          } else {
-            const diff = (parseInt(item.poQty || qty) - qty);
-            status = `❌ Still lacking (${diff})`;
-          }
+          return `
+            <tr>
+              <td>${po}</td>
+              <td>${type}</td>
+              <td>${color}</td>
+              <td>${size}</td>
+              <td>${qty}</td>
+              <td>${forThis}</td>
+              <td>${remain}</td>
+              <td>${rework}</td>
+              <td>${status}</td>
+            </tr>
+          `;
+        }).join("");
 
-          output += `${po} | ${type} | ${color} | ${size} | ${qty} | ${remain} | ${rework} | ${status}\n`;
-        });
+        const table = `
+          <h3>📦 Invoice: ${data.invoice} | Export Date: ${exportDate}</h3>
+          <table style="border-collapse: collapse; width: 100%;">
+            <thead>
+              <tr style="background-color: #e75480; color: white;">
+                <th>PO</th>
+                <th>TYPE</th>
+                <th>COLOR</th>
+                <th>SIZE</th>
+                <th>QTY</th>
+                <th>FOR THIS</th>
+                <th>REMAIN</th>
+                <th>REWORK</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <p style="margin-top: 10px;">📊 Total ${data.invoice}: ${totalQty} PCS of Luggages</p>
+          <p>📞 If there is any mistake, please contact Emilio.</p>
+        `;
 
-        // Tambahkan total
-        output += `\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages`;
-
-        // Tampilkan hasil
         resultDiv.innerHTML = `
           <div style="
             border: 2px solid #e75480;
             background: #ffd6d6;
             padding: 15px;
             border-radius: 10px;
-            max-width: 100%;
-            margin: auto;
             overflow-x: auto;
-            white-space: pre;
-            font-family: monospace;
-            font-size: 14px;
-            line-height: 1.5;
-          ">${output}</div>
+            max-width: 100%;
+          ">${table}</div>
         `;
       })
       .catch(err => {

@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     resultDiv.innerHTML = "⏳ Loading...";
 
-    const scriptURL = "YOUR_DEPLOYED_WEBAPP_URL"; // ganti dengan URL Apps Script
+    const scriptURL = "https://script.google.com/macros/s/AKfycbxRhlUtsm4xxJZg3q7mNYjDD7SN_JilVo9kPOiNeS2ezVSUoB1OpdoosD7lQgXyscFqVA/exec";
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
       .then(res => {

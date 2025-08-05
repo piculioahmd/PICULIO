@@ -1,109 +1,45 @@
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // ⛔ mencegah reload!
+    e.preventDefault(); // ⛔ penting untuk mencegah reload!
 
     const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
     const resultDiv = document.getElementById("result");
 
     if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin semua field-nya.";
+      resultDiv.innerHTML = "⚠️ Please enter brand and invoice.";
       return;
     }
 
     resultDiv.innerHTML = "⏳ Loading...";
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwiXZXtrn3iR97nrSaKmf61jMSK6-N6DAQLW3v9TNBJv15__DjSoz5FeHyUBG7NZpTcPA/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbyJNZRghlJ93AEsJw3jpUHNbdX2FuPDZCw09ED7VYhbbjiwAN8zxyiPkK6tZRxbvjvfyQ/exec";
 
     fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Network error");
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => {
         if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ We didn't find ${invoice}. Check your data.`;
+          resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
           return;
         }
 
-        // Hitung total QTY FOR THIS INV
-        const totalQty = data.results.reduce((sum, item) => sum + (parseInt(item.forThis) || 0), 0);
+        let output = `📦 ${data.invoice}\n\n`;
+        output += `PO           | TYPE      | COLOR   | SIZE  | QTY | REMAIN | REWORK | STATUS\n`;
+        output += `-------------|-----------|---------|-------|-----|--------|--------|--------\n`;
 
-        const rows = data.results.map(item => `
-          <tr>
-            <td>${item.po}</td>
-            <td>${item.type}</td>
-            <td>${item.color}</td>
-            <td>${item.size}</td>
-            <td>${item.qty}</td>
-            <td>${item.remain}</td>
-            <td>${item.forThis}</td>
-            <td>${item.rework}</td>
-            <td>${item.status}</td>
-          </tr>
-        `).join("");
+        data.items.forEach(item => {
+          const { po, itemType, color, size, qty, remaining, rework, status } = item;
+          output += `${(po || '-').padEnd(13)}| ${(itemType || '-').padEnd(10)}| ${(color || '-').padEnd(8)}| ${(size || '-').padEnd(6)}| ${String(qty).padEnd(4)}| ${String(remaining).padEnd(6)}| ${String(rework || 0).padEnd(6)}| ${status}\n`;
+        });
 
-        const output = `
-          <style>
-            .result-box {
-              background: #ffd6d6;
-              padding: 20px;
-              border-radius: 12px;
-              font-family: Arial, sans-serif;
-              color: #222;
-              max-width: 800px;
-              margin: auto;
-              border: 1px solid #e75480;
-            }
-            .result-box h3 {
-              margin-top: 0;
-            }
-            .result-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 10px;
-            }
-            .result-table th, .result-table td {
-              border: 1px solid #aaa;
-              padding: 6px 10px;
-              text-align: center;
-            }
-            .result-table th {
-              background: #ff9a9a;
-              font-weight: bold;
-            }
-            .result-table tbody tr:nth-child(even) {
-              background: #fff3f3;
-            }
-            .summary-block, .contact {
-              margin: 0;
-              padding: 0;
-            }
-            .contact {
-              margin-top: 4px;
-            }
-          </style>
-          <div class="result-box">
-            <h3>📦 Invoice: ${invoice}</h3>
-            <table class="result-table">
-              <thead>
-                <tr>
-                  <th>PO</th><th>MODEL</th><th>COLOR</th><th>SIZE</th>
-                  <th>QTY</th><th>REMAIN</th><th>FOR THIS INV</th><th>REWORK</th><th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-            <p class="summary-block">Total: ${totalQty} PCS of Luggages</p>
-            <p class="contact">📞 Jika ada yang tak beres, hubungi Emilio.</p>
-          </div>
-        `;
+        output += `\n📊 Total ${data.invoice}: ${data.totalQty}`;
+        output += `\n📞 If there is any mistake, please contact Emilio!`;
 
-        resultDiv.innerHTML = output;
+        resultDiv.innerHTML = `<pre>${output}</pre>`;
       })
       .catch((err) => {
         console.error("Fetch error:", err);
-        resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;
+        resultDiv.innerHTML = "⚠️ Error fetching data.";
       });
   });
 });

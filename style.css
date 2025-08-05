@@ -1,67 +1,35 @@
-body {
-  font-family: Arial, sans-serif;
-  background-color: #ffb6c1;
-  margin: 0;
-  padding: 0;
-}
-
-.container {
-  max-width: 600px;
-  margin: 20px auto;
-  background-color: #ffe4e1;
+.result-container {
+  background: #ffd6d6;
   padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  font-family: Arial, sans-serif;
+  color: #222;
+  max-width: 800px;
+  margin: auto;
 }
 
-h1 {
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 15px;
+}
+
+.result-table th, .result-table td {
+  border: 1px solid #aaa;
+  padding: 6px 10px;
   text-align: center;
-  color: #800000;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-input[type="text"] {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-button {
-  padding: 10px;
-  background-color: #ffffe0;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  color: #333;
-}
-
-button:hover {
-  background-color: #f0e68c;
-}
-
-#result {
-  margin-top: 20px;
-  white-space: pre-wrap;
-  font-family: monospace;
-  background-color: #ffc0cb;
-  padding: 15px;
-  border-radius: 10px;
-  border: 1px solid #e75480;
-}
-
-.status-ok {
-  color: green;
+.result-table th {
+  background: #ff9a9a;
   font-weight: bold;
 }
 
-.status-not-enough {
-  color: red;
+.result-table tbody tr:nth-child(even) {
+  background: #fff3f3;
+}
+
+.summary {
   font-weight: bold;
+  margin-bottom: 8px;
 }

@@ -31,7 +31,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // Mulai format output
         let result = `📦 ${data.invoice || invoice}\n`;
         let totalQty = 0;
-        let totalRework = 0;
 
         // Loop item satu per satu
         data.results.forEach((item) => {
@@ -44,11 +43,9 @@ document.addEventListener("DOMContentLoaded", function () {
           const rework = parseInt(item.rework) || 0;
 
           totalQty += qty;
-          totalRework += rework;
-
           const diff = qty - inQty;
-          let status = "";
 
+          let status;
           if (inQty >= qty) {
             status = "✅ Already OK";
           } else if (rework > 0 && rework >= diff) {
@@ -63,24 +60,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         // Tambahkan total dan info kontak
-        result += `\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages`;
-        if (totalRework > 0) {
-          result += `\n🔧 Total Rework: ${totalRework} PCS`;
-        }
-        result += `\n📞 If there is any mistake, please contact Emilio!`;
+        result += `\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages\n📞 If there is any mistake, please contact Emilio!`;
 
-        // Tampilkan di halaman dengan border dan scroll
+        // Sajikan dalam kotak dengan border + scroll horizontal
         resultDiv.innerHTML = `
           <div style="
-            border: 1px solid #e75480;
+            border: 2px solid #e75480;
             background: #ffd6d6;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 10px;
             max-width: 800px;
             margin: auto;
             overflow-x: auto;
             white-space: pre;
             font-family: monospace;
+            font-size: 14px;
+            line-height: 1.4;
           ">${result}</div>
         `;
       })

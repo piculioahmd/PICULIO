@@ -34,50 +34,46 @@ document.addEventListener("DOMContentLoaded", function () {
           const model = item.type || "";
           const color = item.color || "";
           const size = item.size || "";
-          const qty = parseInt(item.qty) || 0;
-          const inQty = parseInt(item.forThis) || 0;
 
-          // Rework QTY & Results
+          // Perbaikan: qty ambil dari kolom J (IN)
+          const qty = parseInt(item.qty) || 0;
+
+          // Rework ambil dari kolom N (Rework QTY)
           const reworkQty = parseInt(item.reworkQty) || 0;
-          const reworkResults = item.reworkResults || ""; // misal "Passed", "Failed", dll.
 
           totalQty += qty;
-          const diff = qty - inQty;
           let status;
 
-          // Logika status
-          if (inQty >= qty) {
+          if (reworkQty > 0 && reworkQty + qty >= qty) {
             status = "✅ Already OK";
-          } else if (reworkQty > 0 && reworkQty + inQty >= qty) {
+          } else if (qty > 0) {
             status = "✅ Already OK";
           } else {
-            status = `❌ Still lacking (${diff})`;
+            status = `❌ Still lacking (${qty})`;
           }
 
-          // Tambahkan keterangan rework bila ada
-          let reworkInfo = "";
+          // Tambahkan info rework kalau ada
           if (reworkQty > 0) {
-            reworkInfo = ` with Rework ${reworkQty} pcs`;
-            if (reworkResults) reworkInfo += ` (${reworkResults})`;
+            status += ` with Rework ${reworkQty} pcs`;
           }
 
           return {
             text: `${po} ${model} ${color} ${size} for ${qty}`,
-            status: `${status}${reworkInfo}`
+            status
           };
         });
 
-        // Tentukan panjang maksimal untuk rata kanan
+        // Rata kanan supaya status sejajar
         const maxTextLength = Math.max(...items.map(i => i.text.length));
         const formattedItems = items.map(i => {
-          const padding = " ".repeat(maxTextLength - i.text.length + 3);
+          const padding = " ".repeat(maxTextLength - i.text.length + 5);
           return `${i.text}${padding}${i.status}`;
         }).join("\n");
 
-        // Susun output akhir
+        // Output final
         const result = `${formattedItems}\n\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages\n📞 If there is any mistake, please contact Emilio!`;
 
-        // Tampilkan dalam kotak bergulir horizontal
+        // Kotak dengan scroll horizontal
         resultDiv.innerHTML = `
           <div style="
             border: 2px solid #e75480;

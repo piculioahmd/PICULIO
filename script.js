@@ -55,6 +55,9 @@ document.addEventListener("DOMContentLoaded", function () {
               margin: auto;
               border: 1px solid #e75480;
             }
+            .result-box h3 {
+              margin-top: 0;
+            }
             .result-table {
               width: 100%;
               border-collapse: collapse;
@@ -72,12 +75,12 @@ document.addEventListener("DOMContentLoaded", function () {
             .result-table tbody tr:nth-child(even) {
               background: #fff3f3;
             }
-            .summary-block {
-              font-weight: bold;
-              text-align: left;
+            .summary-block, .contact {
+              margin: 0;
+              padding: 0;
             }
             .contact {
-              margin-top: 3px;
+              margin-top: 4px;
             }
           </style>
           <div class="result-box">

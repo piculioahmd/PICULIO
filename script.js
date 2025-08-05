@@ -36,49 +36,51 @@ document.addEventListener("DOMContentLoaded", function () {
           const type = item.type || "";
           const color = item.color || "";
           const size = item.size || "";
-          const qty = parseInt(item.qty) || 0;        // alokasi untuk invoice ini
-          const forThis = parseInt(item.forThis) || 0; // stok tersedia
-          const remain = parseInt(item.remain) || 0;   // kolom K
-          const rework = parseInt(item.rework) || 0;   // kolom N
+          const qty = parseFloat(item.qty) || 0;        // alokasi untuk invoice ini
+          const forThis = parseFloat(item.forThis) || 0; // stok tersedia
+          const remain = parseFloat(item.remain) || 0;   // kolom K
+          const rework = parseFloat(item.rework) || 0;   // kolom N
           const status = item.status || "";
 
           totalQty += qty;
 
           return `
             <tr>
-              <td>${po}</td>
-              <td>${type}</td>
-              <td>${color}</td>
-              <td>${size}</td>
-              <td>${qty}</td>
-              <td>${forThis}</td>
-              <td>${remain}</td>
-              <td>${rework}</td>
-              <td>${status}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${po}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${type}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${color}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${size}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${qty}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${forThis}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${remain}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${rework}</td>
+              <td style="border: 1px solid #000; padding: 4px;">${status}</td>
             </tr>
           `;
         }).join("");
 
         const table = `
           <h3>📦 Invoice: ${data.invoice} | Export Date: ${exportDate}</h3>
-          <table style="border-collapse: collapse; width: 100%;">
+          <table style="border-collapse: collapse; width: max-content; min-width: 100%;">
             <thead>
               <tr style="background-color: #e75480; color: white;">
-                <th>PO</th>
-                <th>TYPE</th>
-                <th>COLOR</th>
-                <th>SIZE</th>
-                <th>QTY</th>
-                <th>FOR THIS</th>
-                <th>REMAIN</th>
-                <th>REWORK</th>
-                <th>STATUS</th>
+                <th style="border: 1px solid #000; padding: 5px;">PO</th>
+                <th style="border: 1px solid #000; padding: 5px;">TYPE</th>
+                <th style="border: 1px solid #000; padding: 5px;">COLOR</th>
+                <th style="border: 1px solid #000; padding: 5px;">SIZE</th>
+                <th style="border: 1px solid #000; padding: 5px;">QTY</th>
+                <th style="border: 1px solid #000; padding: 5px;">FOR THIS</th>
+                <th style="border: 1px solid #000; padding: 5px;">REMAIN</th>
+                <th style="border: 1px solid #000; padding: 5px;">REWORK</th>
+                <th style="border: 1px solid #000; padding: 5px;">STATUS</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
           </table>
-          <p style="margin-top: 10px;">📊 Total ${data.invoice}: ${totalQty} PCS of Luggages</p>
-          <p>📞 If there is any mistake, please contact Emilio.</p>
+          <p style="margin-top: 10px; margin-bottom: 5px;">
+            📊 Total ${data.invoice}: ${totalQty} PCS of Luggages
+          </p>
+          <p style="margin-top: 0;">📞 If there is any mistake, please contact Emilio.</p>
         `;
 
         resultDiv.innerHTML = `
@@ -87,8 +89,10 @@ document.addEventListener("DOMContentLoaded", function () {
             background: #ffd6d6;
             padding: 15px;
             border-radius: 10px;
-            overflow-x: auto;
             max-width: 100%;
+            max-height: 400px;
+            margin: auto;
+            overflow: auto;
           ">${table}</div>
         `;
       })

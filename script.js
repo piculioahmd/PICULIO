@@ -28,59 +28,56 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let totalQty = 0;
 
-        const items = data.results.map(item => {
-          const po = item.po || "";
-          const model = item.type || "";
-          const color = item.color || "";
-          const size = item.size || "";
+        // Header
+        let output = `PO | TYPE | COLOR | SIZE | QTY | REMAIN | REWORK | STATUS\n`;
 
-          const poQty = parseInt(item.poQty) || 0;        // PO QTY (kolom I)
-          const inQty = parseInt(item.qty) || 0;          // IN (kolom J)
-          const reworkQty = parseInt(item.reworkQty) || 0; // Rework QTY (kolom N)
+        // Format per item
+        data.results.forEach(item => {
+          const po = item.po || "";             // kolom A
+          const type = item.type || "";         // kolom E
+          const color = item.color || "";       // kolom I
+          const size = item.size || "";         // kolom F
+          const qty = parseInt(item.qty) || 0;  // kolom INV (matching invoice)
+          const remain = item.remain || "";     // kolom K
+          const rework = parseInt(item.reworkQty) || 0; // kolom N
 
-          totalQty += poQty;
+          totalQty += qty;
 
-          const diff = poQty - inQty;
+          // Logika status
           let status;
-
-          if (inQty >= poQty) {
+          if (qty >= parseInt(item.poQty || qty)) {
             status = "✅ Already OK";
-          } else if (inQty + reworkQty >= poQty) {
-            status = `✅ Already OK with Rework ${reworkQty} pcs`;
-          } else if (reworkQty > 0) {
-            status = `❌ Still lacking (${diff}) with Rework ${reworkQty} pcs`;
+          } else if (qty + rework >= parseInt(item.poQty || qty)) {
+            status = `✅ Already OK with Rework ${rework} pcs`;
+          } else if (rework > 0) {
+            const diff = (parseInt(item.poQty || qty) - qty);
+            status = `❌ Still lacking (${diff}) with Rework ${rework} pcs`;
           } else {
+            const diff = (parseInt(item.poQty || qty) - qty);
             status = `❌ Still lacking (${diff})`;
           }
 
-          return {
-            text: `${po} ${model} ${color} ${size} for ${inQty}`,
-            status
-          };
+          output += `${po} | ${type} | ${color} | ${size} | ${qty} | ${remain} | ${rework} | ${status}\n`;
         });
 
-        const maxTextLength = Math.max(...items.map(i => i.text.length));
-        const formattedItems = items.map(i => {
-          const padding = " ".repeat(maxTextLength - i.text.length + 5);
-          return `${i.text}${padding}${i.status}`;
-        }).join("\n");
+        // Tambahkan total
+        output += `\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages`;
 
-        const result = `${formattedItems}\n\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages\n📞 If there is any mistake, please contact Emilio!`;
-
+        // Tampilkan hasil
         resultDiv.innerHTML = `
           <div style="
             border: 2px solid #e75480;
             background: #ffd6d6;
             padding: 15px;
             border-radius: 10px;
-            max-width: 900px;
+            max-width: 100%;
             margin: auto;
             overflow-x: auto;
             white-space: pre;
             font-family: monospace;
             font-size: 14px;
             line-height: 1.5;
-          ">${result}</div>
+          ">${output}</div>
         `;
       })
       .catch(err => {

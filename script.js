@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Mulai format output
         let result = `📦 ${data.invoice || invoice}\n`;
         let totalQty = 0;
+        let totalRework = 0;
 
         // Loop item satu per satu
         data.results.forEach((item) => {
@@ -41,6 +42,9 @@ document.addEventListener("DOMContentLoaded", function () {
           const qty = parseInt(item.qty) || 0;
           const inQty = parseInt(item.forThis) || 0;
           const rework = parseInt(item.rework) || 0;
+
+          totalQty += qty;
+          totalRework += rework;
 
           const diff = qty - inQty;
           let status = "";
@@ -56,14 +60,29 @@ document.addEventListener("DOMContentLoaded", function () {
           }
 
           result += `${po} ${itemType} ${color} ${size} for ${qty} ${status}\n`;
-          totalQty += qty;
         });
 
         // Tambahkan total dan info kontak
-        result += `\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages\n📞 If there is any mistake, please contact Emilio!`;
+        result += `\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages`;
+        if (totalRework > 0) {
+          result += `\n🔧 Total Rework: ${totalRework} PCS`;
+        }
+        result += `\n📞 If there is any mistake, please contact Emilio!`;
 
-        // Tampilkan di halaman
-        resultDiv.innerHTML = `<pre>${result}</pre>`;
+        // Tampilkan di halaman dengan border dan scroll
+        resultDiv.innerHTML = `
+          <div style="
+            border: 1px solid #e75480;
+            background: #ffd6d6;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 800px;
+            margin: auto;
+            overflow-x: auto;
+            white-space: pre;
+            font-family: monospace;
+          ">${result}</div>
+        `;
       })
       .catch((err) => {
         console.error("Fetch error:", err);

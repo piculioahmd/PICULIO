@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // Hindari reload halaman
+    e.preventDefault();
 
     const brand = document.getElementById("brand").value;
     const invoice = document.getElementById("invoice").value.trim().toUpperCase();
@@ -28,52 +28,45 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let totalQty = 0;
 
-        // Format data per item
         const items = data.results.map(item => {
           const po = item.po || "";
           const model = item.type || "";
           const color = item.color || "";
           const size = item.size || "";
 
-          // Perbaikan: qty ambil dari kolom J (IN)
-          const qty = parseInt(item.qty) || 0;
+          const poQty = parseInt(item.poQty) || 0;        // PO QTY (kolom I)
+          const inQty = parseInt(item.qty) || 0;          // IN (kolom J)
+          const reworkQty = parseInt(item.reworkQty) || 0; // Rework QTY (kolom N)
 
-          // Rework ambil dari kolom N (Rework QTY)
-          const reworkQty = parseInt(item.reworkQty) || 0;
+          totalQty += poQty;
 
-          totalQty += qty;
+          const diff = poQty - inQty;
           let status;
 
-          if (reworkQty > 0 && reworkQty + qty >= qty) {
+          if (inQty >= poQty) {
             status = "✅ Already OK";
-          } else if (qty > 0) {
-            status = "✅ Already OK";
+          } else if (inQty + reworkQty >= poQty) {
+            status = `✅ Already OK with Rework ${reworkQty} pcs`;
+          } else if (reworkQty > 0) {
+            status = `❌ Still lacking (${diff}) with Rework ${reworkQty} pcs`;
           } else {
-            status = `❌ Still lacking (${qty})`;
-          }
-
-          // Tambahkan info rework kalau ada
-          if (reworkQty > 0) {
-            status += ` with Rework ${reworkQty} pcs`;
+            status = `❌ Still lacking (${diff})`;
           }
 
           return {
-            text: `${po} ${model} ${color} ${size} for ${qty}`,
+            text: `${po} ${model} ${color} ${size} for ${inQty}`,
             status
           };
         });
 
-        // Rata kanan supaya status sejajar
         const maxTextLength = Math.max(...items.map(i => i.text.length));
         const formattedItems = items.map(i => {
           const padding = " ".repeat(maxTextLength - i.text.length + 5);
           return `${i.text}${padding}${i.status}`;
         }).join("\n");
 
-        // Output final
         const result = `${formattedItems}\n\n📊 Total ${data.invoice || invoice}: ${totalQty} PCS of Luggages\n📞 If there is any mistake, please contact Emilio!`;
 
-        // Kotak dengan scroll horizontal
         resultDiv.innerHTML = `
           <div style="
             border: 2px solid #e75480;

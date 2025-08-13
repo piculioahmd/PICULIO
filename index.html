@@ -2,55 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Invoice Checker 📦</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
+
+  <div class="form-container">
     <h1>📦 Invoice Checker</h1>
-
-    <form id="invoiceForm" autocomplete="off">
-      <label for="brand">Brand</label>
-      <select id="brand" name="brand" required>
-        <option value="" disabled selected>Pilih brand…</option>
-        <option>TUMI</option>
-        <option>VICTORINOX</option>
-        <option>BRIC`S</option>
-        <option>AWAY</option>
-        <option>ARLO SKYE</option>
-        <option>BEIS</option>
-        <option>LOJEL</option>
-      </select>
-
-      <label for="invoice">Invoice No.</label>
-      <input
-        type="text"
-        id="invoice"
-        name="invoice"
-        placeholder="Mis. INV-E2500417"
-        required
-      />
-
-      <button type="submit" id="submitBtn">Check</button>
+    <form id="invoiceForm">
+      <input type="text" id="brand" placeholder="Brand (e.g., TUMI)" required />
+      <input type="text" id="invoice" placeholder="Invoice No (e.g., INV-E2500417)" required />
+      <button type="submit">Check</button>
     </form>
-
-    <div id="hint" class="hint">
-      Masukkan brand dan nomor invoice, lalu tekan <b>Check</b>.
-    </div>
-
-    <div id="summary" class="summary hidden"></div>
-    <div id="result" class="result hidden"></div>
   </div>
 
-  <footer>
-    <small>Made for Google Sheets → Vercel • <span id="today"></span></small>
-  </footer>
+  <div class="table-container">
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th>PO</th>
+          <th>TYPE</th>
+          <th>COLOR</th>
+          <th>SIZE</th>
+          <th>QTY</th>
+          <th>REMAIN</th>
+          <th>REWORK</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="8" class="loading">Loading...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-  <!-- Script diletakkan di akhir body supaya form sudah ada saat JS jalan -->
-  <script src="/script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

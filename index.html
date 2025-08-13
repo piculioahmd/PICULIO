@@ -1,21 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Invoice Checker</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>Invoice Checker 📦</title>
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <div class="container">
     <h1>📦 Invoice Checker</h1>
-    <form id="invoiceForm">
-      <input type="text" id="brand" placeholder="Brand (e.g., TUMI)" required />
-      <input type="text" id="invoice" placeholder="Invoice No (e.g., INV-E2500417)" required />
-      <button type="submit">Check</button>
+
+    <form id="invoiceForm" autocomplete="off">
+      <label for="brand">Brand</label>
+      <select id="brand" name="brand" required>
+        <option value="" disabled selected>Pilih brand…</option>
+        <option>TUMI</option>
+        <option>VICTORINOX</option>
+        <option>BRIC`S</option>
+        <option>AWAY</option>
+        <option>ARLO SKYE</option>
+        <option>BEIS</option>
+        <option>LOJEL</option>
+      </select>
+
+      <label for="invoice">Invoice No.</label>
+      <input
+        type="text"
+        id="invoice"
+        name="invoice"
+        placeholder="Mis. INV-E2500417"
+        required
+      />
+
+      <button type="submit" id="submitBtn">Check</button>
     </form>
-    <div id="result" class="result"></div>
+
+    <div id="hint" class="hint">
+      Masukkan brand dan nomor invoice, lalu tekan <b>Check</b>.
+    </div>
+
+    <div id="summary" class="summary hidden"></div>
+    <div id="result" class="result hidden"></div>
   </div>
-  <script src="script.js"></script>
+
+  <footer>
+    <small>Made for Google Sheets → Vercel • <span id="today"></span></small>
+  </footer>
+
+  <script src="/script.js"></script>
 </body>
 </html>

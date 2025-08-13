@@ -1,28 +1,33 @@
 function doGet(e) {
-  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
-  const sheet = ss.getSheetByName("IN");
-  const data = sheet.getDataRange().getValues();
-
-  const brand = e.parameter.brand;
-  const invoice = e.parameter.invoice;
-
-  if (!brand || !invoice) {
-    return jsonOutput({ error: "Missing parameters", found: false });
+  // Pastikan parameter ada
+  if (!e || !e.parameter || !e.parameter.brand || !e.parameter.invoice) {
+    return jsonOutput({ found: false, error: "Missing parameters" });
   }
 
+  const ss = SpreadsheetApp.openById("1XoV7020NTZk1kzqn3F2ks3gOVFJ5arr5NVgUdewWPNQ");
+  const sheet = ss.getSheetByName("IN");
+  if (!sheet) {
+    return jsonOutput({ found: false, error: "Sheet 'IN' not found" });
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  const brand = e.parameter.brand.trim();
+  const invoice = e.parameter.invoice.trim();
+
   const headerRow = 5;
-  const startRow = 5;   // Baris ke-6 di sheet (0-based index 5)
+  const startRow = 5;   // Baris 6 (0-based index 5)
   const startCol = 14;  // Kolom O (0-based index 14)
 
-  const dateRow = data[1];     // Baris ke-2 di sheet
-  const invoiceRow = data[4];  // Baris ke-5 di sheet
+  const dateRow = data[1];     // Baris ke-2
+  const invoiceRow = data[4];  // Baris ke-5
 
+  // Cari kolom invoice
   const invoiceColIndex = invoiceRow.findIndex(
     (val) => val && val.toString().trim().toUpperCase() === invoice.toUpperCase()
   );
-
   if (invoiceColIndex === -1) {
-    return jsonOutput({ found: false });
+    return jsonOutput({ found: false, error: "Invoice not found" });
   }
 
   const today = new Date(sheet.getRange("K1").getValue());
@@ -30,6 +35,7 @@ function doGet(e) {
   const results = [];
   const remainingMap = {};
 
+  // Loop semua baris data barang
   for (let i = startRow; i < data.length; i++) {
     const row = data[i];
     const rowBrand = row[3]; // Kolom D
@@ -77,9 +83,15 @@ function doGet(e) {
     }
   }
 
-  return jsonOutput({ found: true, invoice, exportDate: invoiceDate, results });
+  return jsonOutput({
+    found: results.length > 0,
+    invoice,
+    exportDate: invoiceDate,
+    results
+  });
 }
 
+// Helper untuk JSON + CORS
 function jsonOutput(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))

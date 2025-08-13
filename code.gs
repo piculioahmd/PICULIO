@@ -9,12 +9,16 @@ function doGet(e) {
   if (!brand || !invoice) {
     return ContentService.createTextOutput(
       JSON.stringify({ error: "Missing parameters", found: false })
-    ).setMimeType(ContentService.MimeType.JSON);
+    )
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader("Access-Control-Allow-Origin", "*")
+      .setHeader("Access-Control-Allow-Methods", "GET")
+      .setHeader("Access-Control-Allow-Headers", "Content-Type");
   }
 
   const headerRow = 5;
   const startRow = 6;
-  const startCol = 15; // Kolom O
+  const startCol = 15; // Kolom M
 
   const dateRow = data[1];    // Baris ke-2
   const invoiceRow = data[4]; // Baris ke-5
@@ -26,7 +30,11 @@ function doGet(e) {
   if (invoiceColIndex === -1) {
     return ContentService.createTextOutput(
       JSON.stringify({ found: false })
-    ).setMimeType(ContentService.MimeType.JSON);
+    )
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeader("Access-Control-Allow-Origin", "*")
+      .setHeader("Access-Control-Allow-Methods", "GET")
+      .setHeader("Access-Control-Allow-Headers", "Content-Type");
   }
 
   const today = new Date(sheet.getRange("K1").getValue());
@@ -83,5 +91,9 @@ function doGet(e) {
 
   return ContentService.createTextOutput(
     JSON.stringify({ found: true, invoice, results })
-  ).setMimeType(ContentService.MimeType.JSON);
+  )
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader("Access-Control-Allow-Origin", "*")
+    .setHeader("Access-Control-Allow-Methods", "GET")
+    .setHeader("Access-Control-Allow-Headers", "Content-Type");
 }

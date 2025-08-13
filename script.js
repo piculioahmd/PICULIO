@@ -1,5 +1,5 @@
 // === CONFIG ===
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzW7I7GqPVywunZA5b_l2P-_Q6CLXcA7XIWxunX4FdDaH5gKQwxwIijG5Ng7l78t0yvXA/exec"; // e.g. https://script.google.com/macros/s/AKfycbxxxx/exec
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw8r6OBW8vFE15EzQe3EUKQn9o-_Msqne2BZmwnLbCE4u-PqOngiu8iJHDsBCUCA-dZ6Q/exec"; // e.g. https://script.google.com/macros/s/AKfycbxxxx/exec
 
 // === UI helpers ===
 const $ = (sel) => document.querySelector(sel);

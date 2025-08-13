@@ -1,104 +1,155 @@
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("invoiceForm").addEventListener("submit", function (e) {
-    e.preventDefault();
+// === CONFIG ===
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzW7I7GqPVywunZA5b_l2P-_Q6CLXcA7XIWxunX4FdDaH5gKQwxwIijG5Ng7l78t0yvXA/exec"; // e.g. https://script.google.com/macros/s/AKfycbxxxx/exec
 
-    const brand = document.getElementById("brand").value;
-    const invoice = document.getElementById("invoice").value.trim().toUpperCase();
-    const resultDiv = document.getElementById("result");
+// === UI helpers ===
+const $ = (sel) => document.querySelector(sel);
+const todayEl = $("#today");
+todayEl.textContent = new Date().toLocaleString();
 
-    if (!brand || !invoice) {
-      resultDiv.innerHTML = "⚠️ Masukin semua field-nya.";
-      return;
-    }
+const form = $("#invoiceForm");
+const summaryEl = $("#summary");
+const resultEl = $("#result");
+const hintEl = $("#hint");
+const submitBtn = $("#submitBtn");
 
-    resultDiv.innerHTML = "⏳ Loading...";
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const brand = $("#brand").value?.trim();
+  const invoice = $("#invoice").value?.trim();
+  if (!brand || !invoice) return;
 
-    const scriptURL = "https://script.google.com/macros/s/AKfycbw6ai7mEiJhUzg_5up1XcGZSMk5Pd1ihkgOh1gWacseM-sl5FHBwncj9wJ3EWqQOVlGwA/exec";
+  hintEl.classList.add("hidden");
+  summaryEl.classList.add("hidden");
+  resultEl.classList.add("hidden");
 
-    fetch(`${scriptURL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Network error");
-        return res.json();
-      })
-      .then(data => {
-        if (!data || !data.found) {
-          resultDiv.innerHTML = `❌ Invoice ${invoice} not found.`;
-          return;
-        }
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Checking…";
 
-        // Ambil tanggal ekspor dari Apps Script
-        const exportDate = data.exportDate || "N/A";
+  try {
+    const url = `${GAS_WEB_APP_URL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`;
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-        let totalQty = 0;
-
-        const rows = data.results.map(item => {
-          const po = item.po || "";
-          const type = item.type || "";
-          const color = item.color || "";
-          const size = item.size || "";
-          const qty = parseFloat(item.qty) || 0;        // alokasi untuk invoice ini
-          const forThis = parseFloat(item.forThis) || 0; // stok tersedia
-          const remain = parseFloat(item.remain) || 0;   // kolom K
-          const rework = parseFloat(item.rework) || 0;   // kolom N
-          const status = item.status || "";
-
-          totalQty += qty;
-
-          return `
-            <tr>
-              <td style="border: 1px solid #000; padding: 4px;">${po}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${type}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${color}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${size}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${qty}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${forThis}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${remain}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${rework}</td>
-              <td style="border: 1px solid #000; padding: 4px;">${status}</td>
-            </tr>
-          `;
-        }).join("");
-
-        const table = `
-          <h3>📦 Invoice: ${data.invoice} | Export Date: ${exportDate}</h3>
-          <table style="border-collapse: collapse; width: max-content; min-width: 100%;">
-            <thead>
-              <tr style="background-color: #e75480; color: white;">
-                <th style="border: 1px solid #000; padding: 5px;">PO</th>
-                <th style="border: 1px solid #000; padding: 5px;">TYPE</th>
-                <th style="border: 1px solid #000; padding: 5px;">COLOR</th>
-                <th style="border: 1px solid #000; padding: 5px;">SIZE</th>
-                <th style="border: 1px solid #000; padding: 5px;">QTY</th>
-                <th style="border: 1px solid #000; padding: 5px;">FOR THIS</th>
-                <th style="border: 1px solid #000; padding: 5px;">REMAIN</th>
-                <th style="border: 1px solid #000; padding: 5px;">REWORK</th>
-                <th style="border: 1px solid #000; padding: 5px;">STATUS</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <p style="margin-top: 10px; margin-bottom: 5px;">
-            📊 Total ${data.invoice}: ${totalQty} PCS of Luggages
-          </p>
-          <p style="margin-top: 0;">📞 If there is any mistake, please contact Emilio.</p>
-        `;
-
-        resultDiv.innerHTML = `
-          <div style="
-            border: 2px solid #e75480;
-            background: #ffd6d6;
-            padding: 15px;
-            border-radius: 10px;
-            max-width: 100%;
-            max-height: 400px;
-            margin: auto;
-            overflow: auto;
-          ">${table}</div>
-        `;
-      })
-      .catch(err => {
-        console.error("Fetch error:", err);
-        resultDiv.innerHTML = `⚠️ Gagal fetch data.\n${err.message}`;
-      });
-  });
+    renderSummary(data);
+    renderTable(data);
+  } catch (err) {
+    summaryEl.classList.remove("hidden");
+    summaryEl.innerHTML = `
+      <div class="kv">
+        <div class="item">
+          <div class="k">Status</div>
+          <div class="v">❌ Error</div>
+        </div>
+        <div class="item" style="grid-column: 1 / -1">
+          <div class="k">Detail</div>
+          <div class="v">${(err && err.message) || err}</div>
+        </div>
+      </div>`;
+    resultEl.classList.add("hidden");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Check";
+  }
 });
+
+function renderSummary(data) {
+  const {
+    ok,
+    message,
+    brand,
+    invoiceCode,
+    exportDateText,
+    totalLines,
+    readyLines,
+    partialLines,
+    noScheduleLines,
+    shortfallSum,
+  } = data;
+
+  summaryEl.classList.remove("hidden");
+  summaryEl.innerHTML = `
+    <div class="kv">
+      <div class="item"><div class="k">Brand</div><div class="v">${brand || "-"}</div></div>
+      <div class="item"><div class="k">Invoice</div><div class="v mono">${invoiceCode || "-"}</div></div>
+      <div class="item"><div class="k">Export Date</div><div class="v">${exportDateText || "—"}</div></div>
+      <div class="item"><div class="k">Items</div><div class="v">${totalLines ?? 0}</div></div>
+      <div class="item"><div class="k">Ready</div><div class="v">${readyLines ?? 0}</div></div>
+      <div class="item"><div class="k">Partial</div><div class="v">${partialLines ?? 0}</div></div>
+      <div class="item"><div class="k">No Schedule</div><div class="v">${noScheduleLines ?? 0}</div></div>
+      <div class="item"><div class="k">Total Shortfall</div><div class="v">${shortfallSum ?? 0}</div></div>
+      ${ok ? "" : `<div class="item" style="grid-column: 1 / -1"><div class="k">Note</div><div class="v">${message || "-"}</div></div>`}
+    </div>
+  `;
+}
+
+function badge(status) {
+  const map = {
+    READY: "badge ready",
+    PARTIAL: "badge partial",
+    NO_SCHEDULE: "badge nosched",
+    NO_INVOICE_QTY: "badge noinven",
+    SHORT: "badge short",
+  };
+  const label = {
+    READY: "Ready",
+    PARTIAL: "Partial",
+    NO_SCHEDULE: "No Schedule",
+    NO_INVOICE_QTY: "—",
+    SHORT: "Short",
+  };
+  const cls = map[status] || "badge";
+  return `<span class="${cls}">${label[status] ?? status}</span>`;
+}
+
+function renderTable(data) {
+  const { invoiceCode, lines = [] } = data;
+  resultEl.classList.remove("hidden");
+
+  if (!lines.length) {
+    resultEl.innerHTML = `<div class="hint">Tidak ada baris untuk invoice <b>${invoiceCode}</b>.</div>`;
+    return;
+  }
+
+  const rows = lines.map((r) => {
+    return `
+      <tr>
+        <td class="mono">${r.po || ""}</td>
+        <td>${r.type || ""}</td>
+        <td>${r.color || ""}</td>
+        <td>${r.size || ""}</td>
+        <td class="mono">${r.qty || 0}</td>
+        <td class="mono">${r.inQty ?? 0}</td>
+        <td class="mono">${r.remainingAfterPrev ?? 0}</td>
+        <td class="mono">${r.reworkQty ?? 0}</td>
+        <td>${r.reworkResult || ""}</td>
+        <td>${badge(r.status)}</td>
+        <td class="mono">${r.shortfall || 0}</td>
+      </tr>
+    `;
+  }).join("");
+
+  resultEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div class="badge">📄 ${invoiceCode}</div>
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>PO</th>
+          <th>TYPE</th>
+          <th>COLOR</th>
+          <th>SIZE</th>
+          <th>QTY (Invoice)</th>
+          <th>IN (J)</th>
+          <th>Remain Before</th>
+          <th>Rework QTY</th>
+          <th>Rework Result</th>
+          <th>Status</th>
+          <th>Shortfall</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}

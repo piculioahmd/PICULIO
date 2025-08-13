@@ -1,55 +1,41 @@
-// === CONFIG ===
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw8r6OBW8vFE15EzQe3EUKQn9o-_Msqne2BZmwnLbCE4u-PqOngiu8iJHDsBCUCA-dZ6Q/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycby58B8CiLmKdppjLX3rzt8p3LlsXW-OVyTCM4u7J--ET3pwmfhsK4mIrjZCoev9iB5T8Q/exec";
 
-// Helper
-const $ = (sel) => document.querySelector(sel);
-$("#today").textContent = new Date().toLocaleString();
+const form = document.getElementById("invoiceForm");
+const tableBody = document.querySelector("#resultTable tbody");
 
-const form = $("#invoiceForm");
-const summaryEl = $("#summary");
-const resultEl = $("#result");
-const hintEl = $("#hint");
-const submitBtn = $("#submitBtn");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-// Pastikan form tidak refresh
-form.addEventListener("submit", async function (e) {
-  e.preventDefault(); // blok default refresh
+  const brand = document.getElementById("brand").value.trim();
+  const invoice = document.getElementById("invoice").value.trim();
 
-  const brand = $("#brand").value?.trim();
-  const invoice = $("#invoice").value?.trim();
-  if (!brand || !invoice) return;
-
-  hintEl.classList.add("hidden");
-  summaryEl.classList.add("hidden");
-  resultEl.classList.add("hidden");
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Checking…";
+  // Show loading row
+  tableBody.innerHTML = `<tr><td colspan="8" class="loading">Loading...</td></tr>`;
 
   try {
-    const url = `${GAS_WEB_APP_URL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(`${GAS_URL}?brand=${encodeURIComponent(brand)}&invoice=${encodeURIComponent(invoice)}`);
     const data = await res.json();
 
-    renderSummary(data);
-    renderTable(data);
+    if (!data || data.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:red;">No data found</td></tr>`;
+      return;
+    }
+
+    // Render rows
+    tableBody.innerHTML = data.map(row => `
+      <tr>
+        <td>${row.PO || ""}</td>
+        <td>${row.TYPE || ""}</td>
+        <td>${row.COLOR || ""}</td>
+        <td>${row.SIZE || ""}</td>
+        <td>${row.QTY || ""}</td>
+        <td>${row.REMAIN || ""}</td>
+        <td>${row.REWORK || ""}</td>
+        <td>${row.STATUS || ""}</td>
+      </tr>
+    `).join("");
+
   } catch (err) {
-    summaryEl.classList.remove("hidden");
-    summaryEl.innerHTML = `<div style="color:red">Error: ${err.message}</div>`;
-    resultEl.classList.add("hidden");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Check";
+    tableBody.innerHTML = `<tr><td colspan="8" style="color:red;">Error: ${err.message}</td></tr>`;
   }
 });
-
-function renderSummary(data) {
-  summaryEl.classList.remove("hidden");
-  summaryEl.innerHTML = JSON.stringify(data, null, 2); // sementara tampilkan JSON mentah
-}
-
-function renderTable(data) {
-  resultEl.classList.remove("hidden");
-  resultEl.innerHTML = "Table rendering belum diisi"; // nanti isi sesuai kebutuhan
-}
